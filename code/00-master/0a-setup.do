@@ -23,7 +23,7 @@ else if "`c(username)'" == "c.moura" {							// For Carolina
 }
 
 // main directory
-global root "$dropbox/FGZ2023OffshoreWealth/replication/package_for_github"
+global root "$dropbox/FGZ2023OffshoreWealth/replication/update-to-2023"
 
 // code files macro
 global do "$root/code"
@@ -43,13 +43,3 @@ global tables "$root/tables"
 // raw data macro
 global temp "$root/temp" 
 
-/*
-*-----------------------EXTRACT ZIPPED DATA FILE------------------------------**
-cd "$raw/zucman"
-unzipfile "$raw/zucman/data_gravity.zip", replace
-*erase "$raw/Zucman/data_gravity.zip"
-cd "$raw/Gravity_dta_V202211"
-unzipfile "$raw/Gravity_dta_V202211/Gravity_V202211.zip", replace
-*erase "$raw/Gravity_dta_V202211/Gravity_V202211.zip"
-*===============================================================================
-*/
