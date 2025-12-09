@@ -8,7 +8,7 @@
 
 
 **---------------------------PROGRAMS-----------------------------------------** <------- TO COMPLETE IF NEED
-*ssc install isocodes mmerge wbopendata carryforward
+*ssc install isocodes mmerge wbopendata carryforward wid
 *ssc install estout
 
 

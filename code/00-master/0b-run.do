@@ -10,7 +10,6 @@ clear
 set graphics off
 set more off
 cap log close
-
 ********************************************************************************
 /// Part I: The global portfolio asset liability gap
 ********************************************************************************
@@ -26,7 +25,12 @@ cap log close
 	do "$do/01-gravity-data-build/1d_import_auxiliary_data.do"
 
  // 2. Construct matrices of bilateral portfolio assets
-	do "$do/02-bilateral-portfolio-assets-matrices/2_do_full_matrices.do"
+	do "$do/02-bilateral-portfolio-assets-matrices/2a_do_full_matrices.do"
+	
+ //	2.b. produce output tables bilateral portfolio assets
+	do "$do/02-bilateral-portfolio-assets-matrices/2b_do_table_A1_dta.do"
+	do "$do/02-bilateral-portfolio-assets-matrices/2b_do_table_A2_dta.do"
+	do "$do/02-bilateral-portfolio-assets-matrices/2b_do_table_A3_dta.do"
 
 ********************************************************************************	
 /// Part II: Offshore deposits and by-country allocation
@@ -63,6 +67,9 @@ cap log close
 	
 	// build country offshore wealth data 
 	do "$do/07-offshore-wealth-analysis/7c-build-countries.do"
+	
+	// graph offshore wealth estimates
+	do "$do/07-offshore-wealth-analysis/7d-graph-paper.do"
 
 /// . Erase datasets 	
 
@@ -125,20 +132,12 @@ cap log close
 	}
 
 		
-	// graph offshore wealth estimates
-	do "$do/07-offshore-wealth-analysis/7d-graph-paper.do"
+
 	
 ********************************************************************************
-/// Others:
+/// Other:
 ********************************************************************************
 
-
-/// X. Produce output tables bilateral portfolio assets
-	//produce output tables
-	do "$do/03-produce-output-tables/3_do_table_A1_dta.do"
-	do "$do/03-produce-output-tables/3_do_table_A2_dta.do"
-	do "$do/03-produce-output-tables/3_do_table_A3_dta.do"
-	
 /*
 /// Y. Produce public datasets from confidential ones
 	//Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands  => "$raw\dta\KY_liab_nfc.dta"
@@ -153,4 +152,4 @@ cap log close
 	do "$do/XX-memo/3_memo-export_bank_deposits_in_uae.do"
 */
 
-	
+//----------------------------------------------------------------------------//
