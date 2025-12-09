@@ -6,6 +6,8 @@
 1. Data
 A short description of the required datasets is available in: ~data_for_replication.xlsx.
 The corresponding data files are placed in the folder: ~raw-data/.
+Some input files are too big for the github repository. Download links to the original datasets can be found in the raw-data folder.
+We can also provide our BIS LBS version for exact replication upon request (sgodar@diw.de).
 
 2. Running the Code in Stata
 To replicate the results, follow these steps:
