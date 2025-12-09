@@ -42,7 +42,9 @@
 //                 - "$temp\TIC_update_middleast.dta"
 //                 - "$temp\Bertaut_Judson_middleeast_Dec.dta"
 //                 - "$temp\BIS_total_debt_IO.dta"
-//				   - "$temp\uk_ie_eq_assets.dta"
+//				   - "$temp\missing_uk_eqassets.dta"
+//				   - "$temp\missing_fundshares.dta"
+//				   - "$temp\p_netfinwealth.dta"
 //
 //----------------------------------------------------------------------------//
 
@@ -459,7 +461,7 @@ save "$temp\KY_banks.dta", replace
 
 
 // estimate equity liabilities of non-financial corporations located in Cayman islands
-	import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
+import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
 foreach v of varlist E - AB {
  forvalues k = 2001/2023{
  replace `v' = subinstr(`v',"`k'","v_`k'",.) in 7
@@ -495,7 +497,6 @@ replace cu = "TWD" if country == "Taiwan Province of China"
 drop if cu == ""
 tempfile xrates
 save `xrates'
-*save "$temp/xrates.dta", replace
 
 /* Confidential data
 import delimited "$raw\cayman-compustat-2025.csv", parselocale(en_US) clear // Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands. 
@@ -824,67 +825,120 @@ gen host = 178  // IRL
 tempfile beck
 save `beck'
 
-*merge to cpis-reported uk-ie equity assets
+* merge to cpis-reported uk-ie equity assets
 use "$temp\cpis_merge.dta", clear
 keep if source == 112 & host == 178
 // 2020 in line with Beck et al. "UK reports EUR 336 bn eq assets towards Ireland"
 
 merge 1:1 year using `beck', nogen
 
+// Irish investment funds have more liabilities towards UK than what UK reports 
+// in assets towards Ireland in the CPIS
 gen missing_eqasset = holdings_of_irl_funds - eqasset
+label var missing_eqasset "Irish fund shares without owner in CPIS (Beck et al.)"
+// Some of these missing assets are likely owned by UK residents = "onshore":
+// According to Beck et al. (Table 1: Fund unwind: summary statistics) Irish 
+// investment fonds have bond holdings worth EUR 1,2 tn bn on behalf of 
+// non-EA investors. They also state that EUR 474 bn of these bond holdings were
+// denominated in GBP. This corresponds to 40% of total bond 
+// holdings of Irish investment funds on behalf of non-EA investors 
+// We assume that 95% of pound-denominated are ultimately owned by UK residents 
+// -> 36% of total Irish fund bond holdings
+gen bonds_gbp = 474000 if year == 2020
+replace bonds_gbp = bonds_gbp / xrate
+replace bonds_gbp = bonds_gbp * 0.95
 
-// According to Beck et al. Irish fund shares worth 474 bn EUR were denominated 
-// in GBP and thus owned by UK residents
-gen gbp_denom = 474000 if year == 2020
-replace gbp_denom = gbp_denom / xrate
-gen gbp_share = gbp_denom / missing  // 40%
+// on top of that we assume that the ratio of equity to bond holdings of Irish investment 
+// fund holdings on behalf of UK residents corresponds to the ratio of equity to bond holdings 
+// ratio of Irish investment fund holdings vis-à-vis non-EA countries
+// as reported in Beck et al. "Table 1: Fund unwind: summary statistics" 783/1,354 = 0.58
+gen equity_gb = 0.58 * bonds_gb
+* total IRL fund shares ultimately owned by UK residents
+gen fundshares_gb = bonds_gb + equity_gb	// USD 873 bn
+label var fundshares_gb "Irish fund shares owned by UK residents (est)"
 
-sum gbp_share
-local share r(mean)
-replace gbp_share = `share' if gbp_share == .
-replace gbp_denom = missing * gbp_share
+// for a lower-bound of missing UK-owned IRL fund shares we subtract all 
+// CPIS-reported UK equity (incl. fund share) assets vis-a-vis Ireland
+// from IRL fund shares with UK counterparty minus all CPIS
+gen fundshares_gb_missing = fundshares_gb - eqasset if year == 2020
+label var fundshares_gb_missing "Missing Irish fund shares owned by UK residents (est)"
 
-	
+* compute share of missing UK-IE assets which are likely onshore
+gen onshore_share = fundshares_gb_missing / missing_eqasset // 31% 
+
+* assume fixed share of onshore in missing Irish fund holdings 
+// (not reported in CPIS) to create series for 2014-2021 and correct cpis assets
+sum onshore_share
+local onshore_share r(mean)
+replace onshore_share = `onshore_share' if onshore_share == .
+replace fundshares_gb_missing = missing_eqasset * onshore_share
+
+* fill missing years based on assumed share in total UK equity assets
 merge 1:1 source year using "$temp\data_toteq_update.dta"
 keep if _merge == 3	
+drop _merge
 	
-gen missing_uk_share = gbp_denom / sumeqasset
-gen missing_uk_share2 = gbp_denom / eqasset
+gen missing_uk_share = fundshares_gb_missing / sumeqasset
+/*view share
 graph bar (asis) missing_uk_share if year > 2013, over(year) title(`"Missing Irish fund shares owned by UK residents in % of total CPIS-reported UK assets"', size(medsmall))
+*/
 
 *predict missing years based on share of missing in total UK assets
-ipolate missing_uk_share year, gen(missing_uk_share_epo) epolate
-replace missing_uk_share_epo = 0 if missing_uk_share_epo < 0
 reg missing_uk_share year
 predict missing_uk_share_hat
-*ipolate missing_uk_share2 year, gen(missing_uk_share_hat2) epolate
-*replace missing_uk_share_hat2 = 0 if missing_uk_share_hat2 < 0
 
 label var missing_uk_share "missing uk assets"
-label var missing_uk_share_epo "linear extrapolation"
 label var missing_uk_share_hat "fitted values"
-
-
 
 replace missing_uk_share_hat = missing_uk_share if year > 2013 & year <=2021
 
+/*view prediction
 graph bar (asis) missing_uk_share missing_uk_share_hat, over(year, label(angle(ninety))) title(`"Missing UK-owned Irish fund shares as a share of total CPIS-reported UK assets"', size(medsmall)) legend(nobox ring(0) position(10) cols(1) size(small) region(lstyle(none)))
-
-
+*/
 gen missing_eqasset_uk = missing_uk_share_hat * sumeqasset
-*gen missing_eqasset_uk2 = missing_uk_share_hat2 * eqasset
+label var missing_eqasset_uk "Irish fund shares managed in UK on behalf of UK residents"
 
+/*check
 preserve
 gen missing_eqasset_uk_fitted = missing_eqasset_uk / 1000
-gen missing_eqasset_uk_epo = missing_uk_share_epo * sumeqasset / 1000
-
-label var missing_eqasset_uk_epo "linear extrapolation"
 label var missing_eqasset_uk_fitted "fitted values"
-
-
 graph bar (asis) missing_eqasset_uk_fitted , over(year, label(angle(ninety))) ytitle(`"USD bn"') title(`"Missing UK-owned Irish investment fund shares, USD bn"', size(medsmall))
+graph export "$fig/UK_IE_onshore.pdf", replace
 restore
-
+*/
+preserve
 keep host source year missing_eqasset_uk
 save "$temp\missing_uk_eqassets.dta", replace
+restore
+
+* prepare benchmark for OFW series
+gen ofw_uk_beck = missing_eqasset - fundshares_gb_missing
+label var ofw_uk_beck "Irish fund shares managed in UK on behalf of non-residents"
+*convert to USD bn
+foreach var in ofw_uk_beck missing_eqasset{
+	replace `var' = `var' / 1000
+}
+keep year missing_eqasset ofw_uk_beck 
+save "$temp\missing_fundshares.dta", replace
+
+
+
+//----------------------------------------------------------------------------//
+// World Inequality Database: Global personal financial wealth
+//----------------------------------------------------------------------------//
+
+wid, indicators(mpwfin mpwdeb inyixx)  clear
+bys country: gen p_finasset = value if var =="mpwfin999i"
+bys country: gen p_liab = value if var =="mpwdeb999i"
+bys country : gen price_index = value if var=="inyixx999i" 
+collapse p_finasset p_liab price_index, by(country year)
+keep if country == "WO-MER"
+keep if year >= 2001 & year < 2024
+foreach var in p_finasset p_liab{
+	replace `var' = `var' * price_index
+}
+gen p_netfinwealth = p_finasset - p_liab
+keep year p_netfinwealth
+save "$temp\p_netfinwealth.dta", replace
+
 //----------------------------------------------------------------------------//

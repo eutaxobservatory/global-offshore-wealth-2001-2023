@@ -156,4 +156,4 @@ replace gdp_source = gdp_source + "- Extrapolated" if gdp_current_dollars != . &
 keep iso3 year gdp_current_dollars gdp_source
 save "$work\assembled_gdp_series.dta", replace 
 
-
+//----------------------------------------------------------------------------//

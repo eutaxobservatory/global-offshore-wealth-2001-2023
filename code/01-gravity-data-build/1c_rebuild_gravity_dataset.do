@@ -479,8 +479,6 @@ drop _merge
 //----------------------------------------------------------------------------//
 // 6. complete gravity dataset
 //----------------------------------------------------------------------------//
-save "$temp/temp.dta", replace
-use "$temp/temp.dta", replace
 
 // balance panel
 tab host
