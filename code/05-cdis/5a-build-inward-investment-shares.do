@@ -244,8 +244,7 @@ drop ofc_fdi_reporter
 duplicates drop
 		save "$work/fdi-havens.dta", replace
 
-
-*******		
+//----------------------------------------------------------------------------//
 		
 		
 		
