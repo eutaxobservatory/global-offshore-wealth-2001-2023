@@ -63,7 +63,8 @@ keep if sector == "N" & position == "L" & instrument == "A" & ///
 		parent == "5J" & year >= 2001 & year <= 2023
 		
 		
-* Netherlands Antilles have been removed as a reporting country but global totals have not been adjusted: -> add AN from 2023 version
+* Netherlands Antilles have been removed as a reporting country but global 
+* totals have not been adjusted: -> add AN from 2023 version
 append using "$raw/dta/bis_AN.dta"
 	br bank saver year quarter if saver == "5J" & bank == "5A"
 	sum dep if saver == "5J" & bank == "5A" & year == 2001 & quarter == 1
@@ -86,7 +87,8 @@ saver == "2Z" | saver == "C9"
 
 
 * We add French Southern Territories to France,
-* Greenland to Denmark, Montserrat and Anguilla to British West Indies (for consistency with SNB where BVI, Anguilla and Montserrat are lumped together )
+* Greenland to Denmark, Montserrat and Anguilla to British West Indies 
+* (for consistency with SNB where BVI, Anguilla and Montserrat are lumped together )
 reshape wide dep, i(year bank) j(saver) string
 egen depFRX = rowtotal(depFR depTF), missing
 replace depFR = depFRX 
@@ -109,8 +111,11 @@ depJE depJP depKR depLU depMX depNL depPH depSE depTW depUS depZA), missing			//
 gen dep1R = dep5A - negative1R
 br if dep1R<0
 
+
 // Imputation Netherlands
-// Some bilateral deposits in NL are missing: US deposits in the NL are missing between 2017 and 2022, French deposits in the Netherlands are missing in 2022 -> This might be problematic because they seem to be included in 5A
+// Some bilateral deposits in NL are missing: US deposits in the NL are missing 
+// between 2017 and 2022, French deposits in the Netherlands are missing in 2022 
+// -> This might be problematic because they seem to be included in 5A
 gen dum = 1
 by saver, sort: egen help=total(dum) if depNL!=.
 by saver, sort: egen obs_NL = mean(help)
@@ -126,16 +131,28 @@ replace dep1R_adj = dep1R_adj - help_NL if help_NL!=.
 
 sort saver year
 replace dep1R = dep1R_adj
-br if dep1R <0
-replace dep1R = 0 if dep1R < 0
+
 drop dep1R_adj
 drop dum help *_NL
 
+* Ensure that residual deposits dropping to below zero only in one individual 
+* year do not drop to zero in all following years 
+	br year saver dep1R if dep1R<0 
+	gen help = 1 if dep1R<0
+	by saver, sort: egen help2 = total(help)
+	br year saver dep1R help if help2==1
+	list saver year if help2==1 & help==1
+	sort saver year
+	gen help3 = (dep1R[_n-1]+dep1R[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+	replace dep1R = help3 if dep1R < 0 & help3 != .
+	replace dep1R = 0 if dep1R < 0
+	drop help*
+
 
 ********************************************************************************
-**** Solving 1R distribution discontinuities
+**** Fix 1R distribution discontinuities
 ********************************************************************************
-/*Problem: we have several breaks in the 1R distribution that we might want to correct:
+/*Problem: we have several breaks in the 1R distribution that we want to correct:
 Countries that report aggregate deposits but not bilaterally:
 AT 2001-2006
 CA 2001-2006
@@ -145,7 +162,8 @@ HK 2001-2013
 IT 2001-2013
 */
 
-// Model bilateral deposits of jurisdiction that report only partly bilaterally and subtract them from 1R.
+// Model bilateral deposits of jurisdiction that report only partly bilaterally 
+// and subtract them from 1R.
 
 	* Country distribution on the global residual 1R
 		gen share1R = 1 if saver == "5J"
@@ -155,7 +173,8 @@ IT 2001-2013
 			replace share1R = dep1R/`dep_sum1R`y'' if year == `y'
 		}
 		
-			* save 1R distributions to document how the following adjustments affect the distribution of Asian havens' deposits
+			* save 1R distributions to document how the following adjustments 
+			* affect the distribution of Asian havens' deposits
 		preserve
 			keep saver year dep1R share1R
 			save "$work/distributions_1R.dta", replace
@@ -165,7 +184,6 @@ IT 2001-2013
 		sort saver year
 		gen growth = share1R / share1R[_n-1] if saver==saver[_n-1]
 
-
 		foreach iso in "AT" "CA"{
 			gen help = dep`iso' if saver == "5J"
 			by year, sort: egen dep`iso'_world = mean(help)
@@ -173,18 +191,17 @@ IT 2001-2013
 			gen share`iso' = dep`iso' / dep`iso'_world
 			gen dep`iso'_est = dep`iso' if year > 2006
 		
-			* Let bilateral deposits in missing years grow backwards at the same rate as global residual deposits
+			* Let bilateral deposits in missing years grow backwards at the same
+			* rate as global residual deposits
 
 				sort saver year
 				gen share`iso'_est = share`iso' if year > 2006
 				foreach year in "2006" "2005" "2004" "2003" "2002" "2001" {
 					replace share`iso'_est = share`iso'_est[_n+1] / growth[_n+1] if year == `year' & saver != "5J"
 				}
-			
-						
+								
 			replace dep`iso'_est = share`iso'_est * dep`iso'_world if saver != "5J" & year < 2007
 		}
-
 	
 		replace depAT = depAT_est if year < 2007 & saver != "5J"
 		replace depCA = depCA_est if year < 2007 & saver != "5J"
@@ -194,7 +211,19 @@ IT 2001-2013
 		* Iteratively clean 1R from estimated bilateral distributions
 		replace dep1R = dep1R - depAT if depAT != .
 		replace dep1R = dep1R - depCA if depCA != .
+		
+		* Ensure that residual deposits dropping to below zero only in one 
+		* individual year do not drop to zero in all following years 
+		br year saver dep1R if dep1R < 0 
+		gen help = 1 if dep1R < 0
+		by saver, sort: egen help2 = total(help)
+		br year saver dep1R help if help2 == 1
+		list saver year if help2 == 1 & help == 1
+		sort saver year
+		gen help3 = (dep1R[_n-1]+dep1R[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+		replace dep1R = help3 if dep1R < 0 & help3 != .
 		replace dep1R = 0 if dep1R < 0
+		drop help*
 
 		* Adjusted 1R distribution
 		gen share1R = 1 if saver == "5J"
@@ -223,25 +252,36 @@ IT 2001-2013
 			gen share`iso' = dep`iso' / dep`iso'_world
 			gen dep`iso'_est = dep`iso' if year > 2011
 		
-			* Let bilateral deposits in missing years grow backwards at the same rate as global residual deposits
+			* Let bilateral deposits in missing years grow backwards at the same
+			* rate as global residual deposits
 
 				sort saver year
 				gen share`iso'_est = share`iso' if year > 2011
 				foreach year in "2011" "2010" "2009" "2008" "2007" "2006" "2005" "2004" "2003" "2002" "2001"{
 					replace share`iso'_est = share`iso'_est[_n+1] / growth[_n+1] if year == `year' & saver != "5J"
 				}
-			
-						
+				
 			replace dep`iso'_est = share`iso'_est * dep`iso'_world if saver != "5J" & year < 2012
 		}
-
-					
+	
 		replace depES = depES_est if year < 2012 & saver != "5J"
 		drop dep*_est dep*_world share* share*_est growth
 
 		* iteratively clean 1R from estimated and orginial bilateral distributions
 		replace dep1R = dep1R - depES if depES != .
+		
+		* Ensure that residual deposits dropping to below zero only in one 
+		* individual year do not drop to zero in all following years 
+		br year saver dep1R if dep1R<0 
+		gen help = 1 if dep1R<0
+		by saver, sort: egen help2 = total(help)
+		br year saver dep1R help if help2==1
+		list saver year if help2==1 & help==1
+		sort saver year
+		gen help3 = (dep1R[_n-1]+dep1R[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+		replace dep1R = help3 if dep1R < 0 & help3 != .
 		replace dep1R = 0 if dep1R < 0
+		drop help*
 		
 		* Adjusted 1R distribution
 		gen share1R = 1 if saver == "5J"
@@ -262,7 +302,6 @@ IT 2001-2013
 		sort saver year
 		gen growth = share1R / share1R[_n-1] if saver==saver[_n-1]
 
-
 		foreach iso in "MO"{
 			gen help = dep`iso' if saver == "5J"
 			by year, sort: egen dep`iso'_world = mean(help)
@@ -270,28 +309,38 @@ IT 2001-2013
 			gen share`iso' = dep`iso' / dep`iso'_world
 			gen dep`iso'_est = dep`iso' if year > 2012
 		
-			* Let bilateral deposits in missing years grow backwards at the same rate as global residual deposits
+			* Let bilateral deposits in missing years grow backwards at the same
+			* rate as global residual deposits
 
 				sort saver year
 				gen share`iso'_est = share`iso' if year > 2012
 				foreach year in "2012" "2011" "2010" "2009" "2008" "2007" "2006" "2005" "2004" "2003" "2002" "2001"{
 					replace share`iso'_est = share`iso'_est[_n+1] / growth[_n+1] if year == `year' & saver != "5J"
 				}
-			
-						
+								
 			replace dep`iso'_est = share`iso'_est * dep`iso'_world if saver != "5J" & year < 2013
 		}
 
-
-			
 		replace depMO = depMO_est if year < 2013
 
 		drop dep*_est dep*_world share* share*_est growth
 
 		* iteratively clean 1R from estimated and original bilateral distributions
 		replace dep1R = dep1R -depMO if depMO != .
+		
+		* Ensure that residual deposits dropping to below zero only in one 
+		* individual year do not drop to zero in all following years 
+		br year saver dep1R if dep1R<0 
+		gen help = 1 if dep1R<0
+		by saver, sort: egen help2 = total(help)
+		br year saver dep1R help if help2==1
+		list saver year if help2==1 & help==1
+		sort saver year
+		gen help3 = (dep1R[_n-1]+dep1R[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+		replace dep1R = help3 if dep1R < 0 & help3 != .
 		replace dep1R = 0 if dep1R < 0
-
+		drop help*
+		
 		* Adjusted 1R distribution
 		gen share1R = 1 if saver == "5J"
 		forvalues y = 2001/2023 {
@@ -311,7 +360,6 @@ IT 2001-2013
 		sort saver year
 		gen growth = share1R / share1R[_n-1] if saver==saver[_n-1]
 
-
 		foreach iso in "HK" "IT"{
 			gen help = dep`iso' if saver == "5J"
 			by year, sort: egen dep`iso'_world = mean(help)
@@ -319,19 +367,18 @@ IT 2001-2013
 			gen share`iso' = dep`iso' / dep`iso'_world
 			gen dep`iso'_est = dep`iso' if year > 2013
 		
-			* Let bilateral deposits in missing years grow backwards at the same rate as global residual deposits
+			* Let bilateral deposits in missing years grow backwards at the same 
+			* rate as global residual deposits
 
 				sort saver year
 				gen share`iso'_est = share`iso' if year > 2013
 				foreach year in "2013" "2012" "2011" "2010" "2009" "2008" "2007" "2006" "2005" "2004" "2003" "2002" "2001"{
 					replace share`iso'_est = share`iso'_est[_n+1] / growth[_n+1] if year == `year' & saver != "5J"
 				}
-			
 						
 			replace dep`iso'_est = share`iso'_est * dep`iso'_world if saver != "5J" & year < 2014
 		}
 
-					
 		replace depHK = depHK_est if year < 2014
 		replace depIT = depIT_est if year < 2014
 		drop dep*_est dep*_world share* share*_est growth
@@ -340,9 +387,19 @@ IT 2001-2013
 		* iteratively clean 1R from estimated and orginial bilateral distributions
 		replace dep1R = dep1R - depIT if depIT != .
 		replace dep1R = dep1R - depHK if depHK != .
+
+		* Ensure that residual deposits dropping to below zero only in one 
+		* individual year do not drop to zero in all following years 
+		br year saver dep1R if dep1R<0 
+		gen help = 1 if dep1R<0
+		by saver, sort: egen help2 = total(help)
+		br year saver dep1R help if help2==1
+		list saver year if help2==1 & help==1
+		sort saver year
+		gen help3 = (dep1R[_n-1]+dep1R[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+		replace dep1R = help3 if dep1R < 0 & help3 != .
 		replace dep1R = 0 if dep1R < 0
-
-
+		drop help*
 
 
 	// check result of cleaning of 1R	
@@ -353,14 +410,14 @@ IT 2001-2013
 		local dep_sum1R`y' = r(sum)
 		replace share1R = dep1R / `dep_sum1R`y'' if year == `y'
 	}
-
 		preserve
 		keep year saver dep1R share1R
 		rename *1R *1R_adjHKIT
 		save "$work/distributions_1R_adjust_HKIT.dta", replace
 		restore
 
-		*Clean 1R distribution from the jump caused by China joining only in 2016. Esp. in AE, US, HK, LU
+		*Clean 1R distribution from the jump caused by China joining only in 2016. 
+		* Esp. in AE, US, HK, LU
 gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of deposits to the global total -> contamination of individual countries' share of the global residual may be substantial!
 
 
@@ -376,7 +433,6 @@ gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of de
 	gen dep1R_adj = dep1R if year < 2016
 	replace dep1R_adj = share1R_adj * dep1R_world if year > 2015
 
-
 	sort saver year
 	replace share1R_adj = share1R if year == 2015
 	replace dep1R = dep1R_adj 	
@@ -388,12 +444,16 @@ gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of de
 		save "$work/distributions_1R_china.dta", replace
 	restore
 	
-	drop dep1R_adj share* growth china_effect
+		drop dep1R_adj share* growth china_effect
 
 
-
-* We still lack a distribution for the aggregate of "Asian" havens (comprising all not bilaterally reporting havens)
-* Compute shares in the residual aggregate // share: "share of each wealth-owning jurisdiction in total residual" //share of each saver country in total deposits held in jurisdictions which do not report bilaterally // share of deposits of each saver country in total deposits that cannot be bilaterally allocated
+* We still lack a distribution for the aggregate of "Asian" havens 
+* (comprising all not bilaterally reporting havens)
+* Compute shares in the residual aggregate // share: 
+* "share of each wealth-owning jurisdiction in total residual" //share of each 
+* saver country in total deposits held in jurisdictions which do not report 
+* bilaterally // share of deposits of each saver country in total deposits that 
+* cannot be bilaterally allocated
 
 	gen share = 1 if saver == "5J"
 	forvalues y = 2001/2023 {
@@ -404,7 +464,8 @@ gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of de
 
 
 
-*Shares seen in the residual to allocate amount of havens without bilateral data // Netherlands Antilles, Panama, Malaysia, Bahrain, Bermuda, Bahamas, Curacao, Singapore 
+* Shares seen in the residual to allocate amount of havens without bilateral data 
+// Netherlands Antilles, Panama, Malaysia, Bahrain, Bermuda, Bahamas, Curacao, Singapore 
 	forvalues i=2001/2023 {
 		foreach ctry in AN PA MY BH BM BS CW SG {
 			preserve
@@ -415,7 +476,6 @@ gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of de
 		}
 	}
 
-
 // fill in missing bilateral liabilities of financial centers, e.g. replace Panama's missing bilateral deposits by an amount of deposits estimated under the assumption that each country holds the same share in Panama's deposits (liabilities) as it holds in global not bilaterally allocated deposits
 	forvalues i=2001/2023 {
 		foreach ctry in AN PA MY BH BM BS CW SG {
@@ -424,13 +484,10 @@ gen china_effect = depCN / dep1R if saver == "5J"  // China adds 30% - 42% of de
 		}
 	}
 
-
-
 reshape long dep, i(year saver) j(bank) string
 order year bank saver dep
 sort bank saver year 
 drop share
-
 
 
 * Add Cayman Islands, assumes same country distribution of KY deposits as in AJZ
@@ -464,9 +521,8 @@ drop share
 		append using "`deposits`b''"
 	}
 
-
 ********************************************************************************
-**** Adding UAE deposits
+**** Add UAE deposits
 ********************************************************************************
 
 // add UAE here unit of BIS and UAE is USD million
@@ -570,8 +626,6 @@ gen OFC = 0
 replace OFC = 1 if ofc_pure_haven==1 
 drop ofc_reporter ofc_pure_haven
 
-
-
 * drop deposits held by household in the same country
 drop if bank == saver
 
@@ -593,7 +647,21 @@ sort bank saver year
 	egen depAS = rowtotal(depAN depBH depBM depBS depCW depHK depMO depMY depSG), missing
 	label variable depAS ///
 	"Deposit in Asian haven: HK, Singapore, Macao, Malaysia, Bahrain, Bahamas, Bermuda, Netherlands Antilles / Curacao" 
-			
+
+	
+* Ensure that residual deposits (=Asian deposits) dropping to zero only in 
+* one individual year do not drop to zero in all following years 
+	br year saver depAS if depAS==0 
+	gen help = 1 if depAS==0
+	by saver, sort: egen help2 = total(help)
+	br year saver depAS help if help2==1
+	list saver year if help2==1 & help==1
+	sort saver year
+	gen help3 = (depAS[_n-1]+depAS[_n+1]) / 2 if saver[_n-1]==saver[_n+1] & help == 1 & help[_n-1] != 1 & help[_n+1]!=1
+	replace depAS = help3 if depAS == 0 & help3 != .
+	drop help*
+	
+	
 	*correct shares of each saver in AS according to AJZ here
 		merge m:1 saver using "$raw/dta/AJZ_bisshares0607.dta"
 		drop if _merge == 2 // BL and GL
@@ -604,6 +672,9 @@ sort bank saver year
 		gen shareAS = depAS/allAS
 		gen shareAS_adj = share_AS_ajz if year == 2006 | year == 2007 // adjust each country's deposits such that they match AJZ country share in 2006/07.
 		sort saver year
+		
+	
+		
 		// Let adjusted shares in Asian deposits grow at the same rate as unadjusted
 		gen growth = shareAS / shareAS[_n-1] if saver==saver[_n-1]
 		replace shareAS_adj = shareAS_adj[_n-1] * growth if year > 2007 & saver==saver[_n-1]
@@ -612,25 +683,63 @@ sort bank saver year
 		}
 			
 		gen depAS_adj = shareAS_adj * allAS
+
+	
+		
+			// censor extreme mid-period growth outliers in residual Asian havens deposits
+			list saver year growth if growth > 10 & growth != . & growth[_n-1]!=. & share_AS_ajz0607 != 0 & share_AS_ajz0607 != .
+		
+			/* visual check outlier countries
+			foreach saver in "BB" "GN" "HU" "MN" "PG" "SB" "TJ"{
+				graph twoway (line shareAS year) (line shareAS_adj year) if saver == "`saver'", name("`saver'", replace)
+			}
+			
+			label var depAS "depAS"
+			foreach saver in "BB" "GN" "HU" "MN" "PG" "SB" "ST" "SZ" "TJ"{
+				graph bar (asis) depAS depAS_adj if saver == "`saver'", over(year, label(angle(ninety))) by(saver) name("`saver'", replace)
+			}
+			*/
+			
+			gen shareAS_adj_clean = shareAS_adj
+			* define threshold as multiple of orig value
+			gen ratio = shareAS_adj / shareAS
+			local rel_threshold = 10           // maximum allowed multiple
+			list saver year if ratio > `rel_threshold' & shareAS_adj !=. & shareAS_adj!=0 & shareAS!=0
+			gen flag = 1 if  ratio > `rel_threshold' & shareAS_adj !=. & shareAS_adj!=0 & shareAS!=0
+			bys saver: egen help = mean(flag)
+			replace flag = 1 if help!=.
+			drop help
+
+			replace shareAS_adj_clean = shareAS * `rel_threshold' if ratio > `rel_threshold' & ratio!=. & flag == 1
+		
+			/* document outlier adjustment 
+			foreach saver in "HT" "MM" "SB"{
+				graph twoway (line shareAS year) (line shareAS_adj year) (line shareAS_adj_clean year)  if saver == "`saver'", by(saver) name("`saver'", replace)
+			}
+
+			foreach saver in "HT" "MM" "SB"{
+				graph twoway (line depAS year) (line depAS_adj year)  if saver == "`saver'", by(saver) name("`saver'_2", replace)
+			}
+			*/
+		
+			replace depAS_adj = shareAS_adj_clean * allAS if ratio > `rel_threshold'
+		
 		drop growth 
 		sort saver year
-			
-		
 		replace depAS = depAS_adj if saver != "5J"
 			
-*correct shares of each saver in Panama according to AJZ
+* correct shares of each saver in Panama according to AJZ
 		replace share_PA_ajz = 0 if share_PA_ajz < 0
 		by year, sort: egen allPA = total(depPA) if saver != "5J"
 		gen sharePA = depPA/allPA
 		gen sharePA_adj = share_PA_ajz if year == 2006 | year == 2007 // adjust each country's deposits such that they match AJZ country share in 2006/07.
 		sort saver year
 		// Let adjusted shares in Panama deposits grow at the same rate as unadjusted
-			gen growth = sharePA / sharePA[_n-1] if saver==saver[_n-1]
+			gen growth = sharePA / sharePA[_n-1] if saver == saver[_n-1]
 			replace sharePA_adj = sharePA_adj[_n-1] * growth if year > 2007
 			foreach year in "2005" "2004" "2003" "2002" "2001"{
 				replace sharePA_adj = sharePA_adj[_n+1] / growth[_n+1] if year == `year'
 			}
-			
 			gen depPA_adj = sharePA_adj * allPA
 			
 			drop share* all* growt* dep*_adj
@@ -638,13 +747,13 @@ sort bank saver year
 reshape long dep, i(year saver) j(bank) string
 save "$work/bis-deposits-all-01-23.dta", replace
 
+
 ********************************************************************************
 ********** II - COMPUTE HOUSEHOLD DEPOSITS IN EACH BIS-REPORTING OFC ----*******
 ********************************************************************************
 use "$work/locational.dta", clear
 keep if position=="L" & instrument=="A" & sector=="N" ///
 /* N=non bank; P=non-bank nonfinancial */ & parent=="5J" & quarter == 4
-
 
 
 append using "$raw/dta/bis_AN.dta"
@@ -715,11 +824,11 @@ merge 1:1 year saver using "$work/distributions_1R_china.dta", nogenerate
 			legend(order(1 "orig" 2 "adj AT CA (2007)" 3 "adj ES (2012)" 4 "adj MO (2013)" 5 "adj HK IT (2014)" 6 "china (2016)")) by(saver) name(`saver', replace)
 			}
 			graph combine BR CN DE FR
-			graph export "$fig\comparison\distributions\distr_1R_1.pdf", as(pdf) name("Graph") replace
+			graph export "$fig\adjustments\distr_1R_1.pdf", as(pdf) name("Graph") replace
 			graph combine GB JP NL SA
-			graph export "$fig\comparison\distributions\distr_1R_2.pdf", as(pdf) name("Graph") replace
+			graph export "$fig\adjustments\distr_1R_2.pdf", as(pdf) name("Graph") replace
 			graph combine SG US TW
-			graph export "$fig\comparison\distributions\distr_1R_3.pdf", as(pdf) name("Graph") replace
-				*/
+			graph export "$fig\adjustments\distr_1R_3.pdf", as(pdf) name("Graph") replace
+*/
 						
-			
+//----------------------------------------------------------------------------//

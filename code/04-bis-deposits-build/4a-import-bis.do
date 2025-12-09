@@ -15,9 +15,7 @@
 ********************************************************************************
 
 // import online BIS banking statistics 
-/*copy "https://www.bis.org/statistics/full_lbs_d_pub_csv.zip" ///
-"$raw/locational.zip", replace
-*/ 
+
 insheet using "$raw/full_lbs_d_pub_csv/WS_LBS_D_PUB_csv_col.csv", clear
 // note:  Q:S:C:D:USD:F:GB:A:DE:N:FR:N
 // refers to quarterly (Q) outstanding (S) claims (C) of debt securities
@@ -121,4 +119,4 @@ replace namecounter = "All" if counter == "5J"
 save "$work/locational.dta", replace
 
 
-* ==============================================================================
+//----------------------------------------------------------------------------//
