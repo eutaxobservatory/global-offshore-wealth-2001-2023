@@ -91,6 +91,7 @@ drop region_name
 sort ifs year
 tempfile fiduciary4
 save `fiduciary4'
+
 ********************************************************************************
 *** II--- Append havens not present anymore in Swiss fiduciary data ************
 ********************************************************************************
@@ -233,20 +234,44 @@ foreach var in lfidu lfidudol lfidu2 lfidu2dol{
 
 foreach var in lfidu lfidudol lfidu2 lfidu2dol{
 sort ccode year
-*let deposits grow at orginal growth rates after 2007
+* let deposits grow at orginal growth rates after 2007
 gen g_`var' = `var' / `var'[_n-1] if ccode==ccode[_n-1]
 replace `var'_adj = `var'_adj[_n-1] * g_`var' if year > 2006
 
-*rescale such that overall growth of fiduciary deposits is preserved
+* Ensure that 0 fiduciary deposits in one year does not lead to 0 fiduciary 
+* deposits in all following years (affects very small jurisdictions)
+replace `var'_adj = `var' if `var'_adj == . & `var' != 0
+
+* rescale such that overall growth of fiduciary deposits is preserved
 by year, sort: egen `var'_total = total(`var')
 gen `var'_share = `var'/`var'_total
 by year, sort: egen `var'_total_adj = total(`var'_adj)
 gen `var'_share_adj = `var'_adj/`var'_total_adj
 replace `var'_adj = `var'_share_adj * `var'_total // apply adjusted shares to original total
-drop `var'_total* g_`var' 
+replace `var'_adj = 0 if `var'_adj == . & `var' == 0
+replace `var'_share_adj = 0 if `var'_share_adj == . & `var' == 0
+*drop `var'_total* g_`var' 
 }
 
 		
+/* visual check adjustment effects: plot orig fidu vs. adj fidu
+twoway (line lfidu2dol_share year) (line lfidu2dol_share_adj year) if (ccode == "LIE" | ccode == "VGB" |ccode == "PAN"|ccode=="ITA"|ccode=="SAU"|ccode=="GBR"|ccode=="FRA"|ccode=="VEN" |ccode == "ARE" |ccode=="JEY"|ccode =="CYP" |ccode=="DEU"), by(ccode) name("orig", replace)
+
+foreach iso in "BIH" "BTN" "COM" "CUB" "FJI" {
+twoway (line lfidu2dol_share year) (line lfidu2dol_share_adj year) if ccode == "`iso'" & year > 2000, title("`iso'") name("`iso'_2", replace)
+}
+
+foreach iso in "GNB" "ISR" "KAZ" "KGZ" "LAO" "LSO" "MDA" "MNG" "MRT" "NIC" "PNG" "SLB" "SOM" "THA" "UZB"{
+twoway (line lfidu2dol_share year) (line lfidu2dol_share_adj year) if ccode == "`iso'" & year > 2000, title("`iso'") name("`iso'_2", replace)
+}
+
+preserve
+	label var lfidu2dol "lfidu2dol"
+	twoway (line lfidu2dol year) (line lfidu2dol_adj year) if ccode == "LIE" | ccode == "VGB" |ccode == "PAN"|ccode=="ITA"|ccode=="SAU"|ccode=="GBR"|ccode=="FRA"|ccode=="VEN" |ccode == "ARE" |ccode=="JEY"|ccode =="CYP" |ccode=="DEU", by(ccode)
+restore
+*/
+	
+
 * replace original by corrected distribution (constant shares between 2005-2006)
 foreach var in lfidu lfidudol lfidu2 lfidu2dol{
 	gen `var'_orig = `var'
@@ -323,8 +348,10 @@ label var lfidu2dol "STD adj"
 label var lfidu2dol_fdi_adjustment "FDI adj"
 label var lfidu2dol_russia_adjustment "Cyprus adj"
 sort ccode year
-twoway (line lfidu2dol_orig year) (line lfidu2dol year) (line lfidu2dol_fdi_adjustment year) (line lfidu2dol_russia_adjustment year) if ccode == "RUS", title("Russian deposits in Switzerland")
 
+/* visual check adjustment effect
+twoway (line lfidu2dol_orig year) (line lfidu2dol year) (line lfidu2dol_fdi_adjustment year) (line lfidu2dol_russia_adjustment year) if ccode == "RUS", title("Russian deposits in Switzerland")
+*/
 ********************************************************************************
 ************** VIII----- Definition of Geographical areas ************************
 ********************************************************************************
@@ -471,3 +498,4 @@ restore
 drop *orig
 save "$work/fiduciary-87-23.dta", replace
 
+//----------------------------------------------------------------------------//
