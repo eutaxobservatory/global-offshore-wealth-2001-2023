@@ -243,6 +243,7 @@ drop non_residents share_fdi_realestate dep_total_year
 
 save "$work/bank_deposits_in_uae_allocated.dta", replace
 
+//----------------------------------------------------------------------------//
 
 		
 		
