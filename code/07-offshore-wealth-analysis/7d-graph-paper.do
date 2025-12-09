@@ -1,4 +1,4 @@
-// =============================================================================
+//----------------------------------------------------------------------------//
 // Paper: Global Offshore Wealth, 2001-2023
 //
 // Purpose: generate graphs included in the paper
@@ -38,8 +38,10 @@
 //                 - Fig20: "$fig/ofw_europe.pdf"
 //                 - Fig21: "$fig/ofw-owned-income-level-total-ofw-fdi.pdf"
 //                 - Fig22: "$fig/ofw-owned-by-region-total-ofw-fdi.pdf"
+//				   - Fig23: "$fig/offshore-location-global-wealth-ofc.pdf"
+//				   - Fig24: "$fig/AE_allocation.pdf"
 //                 
-// =============================================================================
+//----------------------------------------------------------------------------//
 
 ********************************************************************************
 * Figure 1: Evolution of Global Offshore Wealth (as a % of world GDP), 2001-2023
@@ -86,6 +88,35 @@ ytitle("% of world GDP", size(small))
 yscale(range(17));
 #delimit cr
 graph export "$fig/world-offshore-gdp-2001-2023.pdf", replace 
+
+
+********************************************************************************
+* Figure 1b: Evolution of Global Offshore Wealth (as a % of global financial wealth), 2001-2023
+********************************************************************************
+**-----------Graph: Evolution of Global Offshore Wealth 2001-2023-------------**
+use "$work/ofw_aggregate", clear
+keep year ofw
+merge 1:1 year using "$temp/p_netfinwealth"
+gen ofw_fin = ofw / p_netfinwealth * 1000000000 * 100
+
+#delimit;
+twoway connected ofw_fin year, 
+msymbol(circle) mcolor(white) mlcolor(black) mlwidth(medthick) lwidth(medium) 
+msize(medsmall) plotregion(margin(none)) graphregion(col(white)) lcolor(black)
+ylabel(
+0 "0%" 2 "2%" 4 "4%" 6 "6%" 8 "8%" 10 "10%", grid glcolor(black%20) labsize(small) 
+angle(horizontal) glpattern(line) glwidth(thin) tstyle(minor) labgap(1) 
+) 
+xlabel(
+2001(1)2023, grid glcolor(black%20) glpattern(vshortdash) glwidth(thin) 
+angle(90) labsize(small) tstyle(minor) nogmin labgap(1)
+) 
+xtitle("")
+ytitle("% of global household financial wealth", size(small))
+yscale(range(10));
+#delimit cr
+graph export "$fig/world-offshore-wealth-2001-2023.pdf", replace 
+
 
 ********************************************************************************
 * Figure 2: Where is the World's Offshore Household Wealth Located?
@@ -244,23 +275,24 @@ replace country = "Taiwan" if iso3 == "TWN"
 replace country = "USA" if iso3 == "USA"
 replace country = "Venezuela" if iso3 == "VEN"
 replace country = country_name if country == ""
+
 #delimit;
 graph bar ratio_offshore_GDP2007 ratio_offshore_GDP2023,
 over(country, sort(ratio_offshore_GDP2007) label(angle(90) labsize(small)
 labgap(1))) 
 graphregion(col(white)) 
 ylabel(0 "0%" 0.1 "10%" 0.2 "20%" 0.3 "30%" 0.4 "40%" 0.5 "50%" 0.6 "60%" 
-0.7 "70%" 0.8 "80%" 0.9 "90%" 1.0 "100%" 1.1 "110%" 1.2 "120%" 1.3 "130%" 1.4 "140%"
+0.7 "70%" 0.8 "80%" 0.9 "90%" 1.0 "100%"
 , tstyle(minor) grid angle(horizontal) glcolor(grey%10) 
 labsize(small) labgap(1)) 
 yline(.11, lcolor(black)) 
 yline(.12, lcolor(black)) 
 ytitle("share of GDP", size(small))  
-text(0.40 31.25 "World Average in 2007: `world_av_2007'%", color(blue*2) size(small))
-text(0.30 31.25 "World Average in 2023: `world_av_2023'%", color(red*1.3) size(small))
+text(0.27 29 "World Average 2007: `world_av_2007'%", color(midblue*1.5) size(vsmall))
+text(0.22 29 "World Average 2023: `world_av_2023'%", color(red*1.3) size(vsmall))
 bargap(15)
 outergap(30)
-bar(1, color() lcolor(black) lwidth(vthin))
+bar(1, color(midblue) lcolor(black) lwidth(vthin))
 bar(2, color(red*1.3) lcolor(black) lwidth(vthin))
 legend(nobox ring(0) position(9) cols(1) size(vsmall) 
 label(1 "Offshore wealth in 2007") label(2 "Offshore wealth in 2023"));
@@ -268,20 +300,6 @@ label(1 "Offshore wealth in 2007") label(2 "Offshore wealth in 2023"));
 graph export "$fig/countries-offshore-gdp-2007-2023.pdf", replace
 
 
-/*calculate World Averages
-use "$work/ofw_aggregate", clear
-sum worldgdp if year == 2007
-local gdp2007 = r(mean)
-sum worldgdp if year == 2023
-local gdp2023 = r(mean)
-use "$work/countries.dta", clear
-keep if indicator == "total_russia_adjustment"
-keep if year == 2007|year==2023
-collapse (sum) value, by(year)
-gen ofw_pct = value/`gdp2007' if year == 2007
-replace ofw_pct = value / `gdp2023' if year == 2023
-*World average weighted: 2007: 11%, 2023 12%*
-*/
 ********************************************************************************
 * Figure 5: Historic Offshore Wealth, 1980-2023 (% of GDP)
 ********************************************************************************
@@ -568,7 +586,7 @@ graph export "$fig/swiss-fiduciary-corrected-87-23.pdf", replace
 ********************************************************************************
 
 * Read data 
-use "$work/fiduciary-87-23_uncorr.dta", clear
+use "$work/fiduciary-87-23_uncorr.dta", clear // pre savings directive correction
 
 * We compute for each country the share in total fiduciary accounts, for the 
 * three indicators (uncorrected, FDI, Russia Cyprus)
@@ -604,7 +622,7 @@ glwidth(thin) tstyle(minor) labgap(1)
 )
 legend(nobox ring(0) position(9) cols(1) size(small) region(lstyle(none)) order(1 "Russian households" 2 "Cypriot households"));
 #delimit cr 
-graph export "$fig/russia-deposits-uncorrected_noSTD.pdf", replace
+graph export "$fig/russia-deposits-uncorrected.pdf", replace
 
 * We graph the evolution of the Russian-owned share in fiduciary accounts when 
 * we add what we assume to be only virtually owned by Cypriot households, i.e
@@ -683,18 +701,18 @@ over(country, sort(ratio_offshore_GDP23russ) label(angle(90) labsize(small)
 labgap(1))) 
 graphregion(col(white)) 
 ylabel(0 "0%" 0.1 "10%" 0.2 "20%" 0.3 "30%" 0.4 "40%" 0.5 "50%" 0.6 "60%" 
-0.7 "70%" 0.8 "80%" 0.9 "90%" 1.0 "100%" 1.1 "110%" 1.2 "120%" 1.3 "130%" 
+0.7 "70%" 0.8 "80%" 0.9 "90%" 1.0 "100%"
 , tstyle(minor) grid angle(horizontal) glcolor(grey%10) 
 labsize(small) labgap(1)) 
 yline(.13, lcolor(black)) 
 ytitle("Share of GDP", size(small)) 
 yline(.13, lcolor(black)) 
-text(0.16 9 "World Average: `world_av_2023'%", color(black*2) size(small))
+text(0.17 9 "World Average: `world_av_2023'%", color(black*2) size(small))
 bargap(15)
 outergap(30)
 bar(1, color() lcolor(black) lwidth(vthin))
 bar(2, color(red*1.3) lcolor(black) lwidth(vthin))
-legend(nobox ring(0) position(9) cols(1) size(vsmall) 
+legend(nobox ring(0) position(10) cols(1) size(vsmall) 
 label(1 "Preferred offshore wealth estimates") label(2 "FDI-corrected offshore wealth estimates"));
 #delimit cr
 graph export "$fig/countries-offshore-gdp-2023-fdi.pdf", replace
@@ -711,10 +729,6 @@ gen share_GB = depGB / bis_total * ofw_other / ofw * 100
 gen share_GGJE = (depGG + depJE) / bis_total * ofw_other / ofw *100 
 gen share_GBplus = (depGB + depGG + depJE) / bis_total * ofw_other / ofw *100 
 
-foreach ofc in "HK" "SG" "US" {
-gen share_`ofc' = dep`ofc' / bis_total * ofw_other / ofw * 100
-}
-
 label var share_GB "UK"
 label var share_GBplus "UK incl. Guernsey and Jersey"
 
@@ -727,7 +741,7 @@ graphregion(col(white)) plotregion(margin(none))
 legend(nobox ring(0) position(5) cols(1) size(small) region(lstyle(none))) 
 xlabel(2001(2)2023, nogrid 
 )
-ylabel(0 "0%" 5 "5%" 10 "10%" 15 "15%" 20 "20%", grid 
+ylabel(0 "0%" 5 "5%" 10 "10%" 15 "15%" 20 "20%" 25 "25%", grid 
 glcolor(grey%10) labsize(small) angle(horizontal) glwidth(thin) 
 tstyle(minor) labgap(1)
 )
@@ -735,7 +749,6 @@ xtitle("")
 title("Offshore wealth hosted by the United Kingdom", size(medsmall))
 name(trend, replace);
 #delimit cr
-
 
 
 // Allocation of offshore wealth hosted by the UK
@@ -790,59 +803,11 @@ title("Location of Ultimate Owners: UK (2023)", size(medsmall))
 name(GB, replace);
 #delimit cr
 
-// Allocation of offshore wealth hosted by the UK incl. Guernsey and Jersey
-use "$work/offshore2023.dta", clear
-keep if bank =="GB"|bank=="JE"|bank=="GG"
-keep saver iso3saver namesaver bank amt_bis sh_bis year rawsh_bis europe
-egen total=total(amt_bis), by(bank)
-gen amt_bis_adj = sh_bis * total
+collapse (sum) sh_bisGB rawsh_bisGB, by(europe)
 
-
-// undo shell company correction
-
-foreach saver in GB CH BE NL IE US {
-replace saver = "`saver'" if saver == "`saver'H"
-}
-sort saver
-replace europe = europe[_n-1] if saver == saver[_n-1]
-
-collapse (sum) amt_bis amt_bis_adj, by(saver europe year)
-egen total=total(amt_bis)
-
-
-gen rawsh_bis = amt_bis/total*100
-gen sh_bis = amt_bis_adj/total*100
-
-gsort -sh_bis
-gen top10_sh = _n
-
-gsort -rawsh_bis
-gen top10_rawsh= _n
-
-#delimit;
-graph bar (asis) sh_bis rawsh_bis
-if saver=="US"|saver=="IE"|saver=="KY"|saver=="NL"|saver=="CH"|saver=="HK"
-|saver=="LU"|saver=="JP"|saver=="SA"|saver=="QA"|saver=="DE"|saver=="FR"
-|saver=="AU"|saver=="CA"|saver=="GB"|saver=="AE"|saver=="SG"|saver=="GB",
-over(saver, sort(top10_sh) label(angle(90) labsize(small)
-labgap(1))) 
-graphregion(col(white)) 
-ylabel(0 "0%" 20 "20%" 40 "40%" 60 "60%" 
-, tstyle(minor) grid angle(horizontal) glcolor(grey%10) glwidth(thin) 
-labsize(small) labgap(1)) 
-bargap(15)
-outergap(30)
-bar(1, color(emerald) lcolor(black) lwidth(vthin))
-bar(2, color(lavender) lcolor(black) lwidth(vthin))
-legend(nobox ring(0) position(3) cols(1) size(small) 
-label(1 "corrected share") label(2 "raw share"))
-title("Location of Ultimate Owners: UK incl. Guernsey and Jersey (2023)", size(medsmall))
-name(GBplus, replace);
-#delimit cr
-
-
-graph combine trend GB GBplus , col(1) xsize(5) ysize(7)
+graph combine trend GB , col(1) xsize(5) ysize(7)
 graph export "$fig/GB_allocation.pdf", replace
+
 
 ********************************************************************************
 * Figure 10: Offshore Wealth and Country Studies
@@ -904,13 +869,12 @@ graph export "$fig/benchmark-cty.pdf", replace
 * Figure 11: Offshore Wealth and CRS-Reported Foreign Wealth
 ********************************************************************************
 use "$raw/dta/crs_all.dta", clear
-rename country iso3
 rename referenceyear year
 merge 1:m iso3 year using "$work/countries.dta"
 keep if _merge == 3
 keep if indicator == "total_russia_adjustment"
 
-gen crs = crsreportedforeignwealthinusd / gdp_current * 1000000000 * 100
+gen crs = crswealth_usd / gdp_current * 1000000000 * 100
 gen ofw_est = value/gdp_current*1000000000 * 100
 
 label var ofw_est "Offshore wealth vs. CRS-reported wealth"
@@ -920,12 +884,14 @@ label var crs "CRS-reported wealth"
 twoway (scatter ofw_est crs , mcolor(midblue*1.5) mlabel(iso3) mlabcolor(midblue)) (lfit ofw_est crs, lcolor(gray) lwidth(thin)) , ///
 ytitle(`"Offshore wealth estimate in % of GDP"', size(small)) ///
 xtitle(`"CRS-reported wealth in % of GDP"', size(small)) ///
-name(test, replace) legend(position(6) size(small)) ///
+name(crs, replace) legend(position(6) size(small)) ///
 xlabel(0 10 20 30 40 50) ///
+ylabel(0 10 20 30 40) ///
 xsize(6) ysize(5) ///
 text(21 46 "← fitted values", color(gray) size(vsmall)) ///
 legend(off)
 graph export "$fig/crs-scatter.pdf", replace 
+
 
 ********************************************************************************
 * Figure 12: BIS-Reported Foreign Bank Deposits and CRS-Reported Foreign Wealth of German Residents, 2019
@@ -974,7 +940,6 @@ rename usd crs_rep
 label var crs_rep "crs reported"
 label var dep "bis reported"
 
-graph bar (asis) dep crs_rep if _merge == 3 & crs != ., over(iso3, label(angle(ninety)))
 sort dep
 keep if _merge == 3 & crs !=.
 keep namebank bank iso3 saver year dep crs
@@ -1088,26 +1053,17 @@ foreach var in ofw ofw_pct gdp{
 	by iso3, sort: egen avg_growth_`var'= mean(growth_`var')
 }
 
-histogram avg_growth_gdp
-histogram avg_growth_ofw if avg_growth_ofw
-histogram avg_growth_ofw if avg_growth_ofw < 50
- 
-tab iso3 if avg_growth_ofw > 50 & avg_growth_ofw!=.
-twoway (scatter avg_growth_ofw avg_growth_gdp) if year==2023, name(scatter, replace)
-twoway (scatter avg_growth_ofw avg_growth_gdp) (lfitci avg_growth_ofw avg_growth_gdp) if year==2023 & iso3!="PLW"&iso3!="TUV", name(scatter2, replace)
-twoway (scatter avg_growth_ofw avg_growth_gdp) if year==2023 & iso3!="PLW" & iso3!="SSD"&iso3!="TUV"
-
-twoway (scatter avg_growth_ofw avg_growth_gdp) (lfitci avg_growth_ofw avg_growth_gdp) if year==2023 & iso3!="PLW" & iso3!="SSD"&iso3!="TUV"
-  
-  
+list iso3 if avg_growth_ofw >= 100 & avg_growth_ofw!=.
 twoway (lfitci avg_growth_ofw avg_growth_gdp, lcolor(gray) lwidth(thin)) (scatter avg_growth_ofw avg_growth_gdp, mcolor(lavender*1.5)) ///
-if year==2023 & iso3!="PLW" & iso3!="TUV", ///
+if year==2023 & iso3!="PLW" & iso3!="TUV" & iso3!= "TLS", ///
 ytitle(`"Average annual offshore wealth growth in %"', size(small)) ///
 xtitle(`"Average annual GDP growth in %"', size(small)) ///
-name(test2, replace) legend(position(6) size(small)) ///
+name(ofw_corr, replace) legend(position(6) size(small)) ///
 legend(off) ///
 xsize(6) ysize(5)
 graph export "$fig/corr-ofw-gdp.pdf", replace 
+
+pwcorr avg_growth_ofw avg_growth_gdp if  iso3!="PLW" & iso3!="TUV" & iso3!="TLS", sig star(0.05)
 
 ********************************************************************************
 * Figure 15 and 16: Offshore Wealth by World Region
@@ -1194,8 +1150,6 @@ graph export "$fig/ofw-regions2.pdf", replace
 ********************************************************************************
 * Figure 17 to 20: Offshore Wealth by World Region
 ********************************************************************************
-
-
 
 use "$work/countries", clear
 keep if indicator == "americ" | indicator == "asian" | indicator == "europe" | indicator== "swiss_russia_adjustment"
@@ -1326,8 +1280,6 @@ by(iso3, rows(2) imargin(small) note(""))
 subtitle(, size(small));
 #delimit cr
 graph export "$fig/ofw_americas.pdf", replace
-
-
 
 
 
@@ -1507,8 +1459,6 @@ save "$temp/sh_ofw_total_russia_adjustement_or_corrected.dta", replace
 ***
 
 use  "$temp/sh_ofw_total_russia_adjustement_or_corrected.dta", clear
-
-
 
 ****
 
@@ -1721,10 +1671,280 @@ graph export "$fig/ofw-owned-by-region-total-ofw-fdi.pdf", replace
 
 
 
+********************************************************************************
+* Figure 2b: Where is the World's Offshore Household Wealth Located - individual financial centers 
+********************************************************************************
+
+use "$work/ofw_aggregate", clear
+foreach ofc in "HK" "SG" "US" "GB" "AE"{
+gen share_`ofc' = dep`ofc' / bis_total * ofw_other / ofw * 100
+}
+gen share_CH = ofw_CH / ofw * 100
+
+label var share_CH "Switzerland"
+label var share_GB "United Kingdom"
+label var share_HK "Hong Kong"
+label var share_SG "Singapore"
+label var share_US "United States"
+label var share_AE "United Arab Emirates"
+
+// Offshore wealth hosted by individual financial center
+#delimit;
+twoway connected share_HK share_SG share_CH share_GB share_US year,
+msymbol(circle triangle square plus diamond) msize(small small small small small) 
+mcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5) mlcolor() mlwidth(thin thin thin thin thin) 
+lwidth(vthin vthin vthin vthin vthin) lcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5)
+graphregion(col(white)) plotregion(margin(none))
+legend(nobox ring(0) position(2) cols(1) size(vsmall) region(lstyle(none))) 
+xlabel(2001(1)2023, grid glcolor(black%20) glpattern(vshortdash) glwidth(thin) 
+angle(90) labsize(small) nogmin labgap(1) tstyle(minor)
+)
+ylabel(0 "0%" 5 "5%" 10 "10%" 15 "15%" 20 "20%" 25 "25%" 30 "30%" 35 "35%" 40 "40%" 45 "45%" 50 "50%" 55 "55%", grid 
+glcolor(black%5) labsize(small) angle(horizontal) glpattern(line) glwidth(thin) 
+tstyle(minor) labgap(1)
+)
+xtitle("")
+ytitle("% of the wealth held in all financial centers", size(small))
+name(trendofc, replace);
+#delimit cr
+graph export "$fig/offshore-location-global-wealth-ofc.pdf", replace 
 
 
 
+// United Arab Emirates
+
+* trend
+
+#delimit;
+twoway connected share_AE year,
+msymbol(circle) msize(small) 
+mcolor(lavender*1.5) mlcolor() mlwidth(thin) 
+lwidth(vthin) lcolor(lavender*1.5)
+graphregion(col(white)) plotregion(margin(none))
+legend(nobox ring(0) position(5) cols(1) size(small) region(lstyle(none))) 
+xlabel(2001(2)2023, nogrid 
+)
+ylabel(0 "0%" 0.5 "0.5%" 1 "1%" 1.5 "1.5%" 2 "2%", grid 
+glcolor(grey%10) labsize(small) angle(horizontal) glwidth(thin) 
+tstyle(minor) labgap(1)
+)
+xtitle("")
+title("Offshore wealth hosted by the United Arab Emirates", size(medsmall))
+name(trend, replace);
+#delimit cr
+
+
+********************************************************************************
+* Figure 2c: Where is the World's Offshore Household Wealth Located - individual 
+* financial centers % of global GDP
+********************************************************************************
+use "$work/ofw_aggregate", clear
+foreach ofc in "HK" "SG" "US" "GB"{
+gen ofw_`ofc' = dep`ofc' / bis_total * ofw_other 
+}
+
+foreach ofc in "HK" "SG" "US" "GB" "CH"{
+gen share_`ofc' = ofw_`ofc'/ worldgdp * 100
+}
+
+label var share_CH "Switzerland"
+label var share_GB "United Kingdom"
+label var share_HK "Hong Kong"
+label var share_SG "Singapore"
+label var share_US "United States"
+
+// Offshore wealth hosted by individual financial center
+#delimit;
+twoway connected share_HK share_SG share_CH share_GB share_US year,
+msymbol(circle triangle square plus diamond) msize(small small small small small) 
+mcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5) mlcolor() mlwidth(thin thin thin thin thin) 
+lwidth(vthin vthin vthin vthin vthin) lcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5)
+graphregion(col(white)) plotregion(margin(none))
+legend(nobox ring(0) position(2) cols(1) size(vsmall) region(lstyle(none))) 
+xlabel(2001(1)2023, grid glcolor(black%20) glpattern(vshortdash) glwidth(thin) 
+angle(90) labsize(small) nogmin labgap(1) tstyle(minor)
+)
+ylabel(0 "0%" 1 "1%" 2 "2%" 3 "3%" 4 "4%", grid 
+glcolor(black%5) labsize(small) angle(horizontal) glpattern(line) glwidth(thin) 
+tstyle(minor) labgap(1)
+)
+xtitle("")
+ytitle("% of world GDP", size(small))
+name(trendofc_gdp, replace);
+#delimit cr
+graph export "$fig/offshore-location-global-wealth-ofc-gdp.pdf", replace 
+
+
+********************************************************************************
+* Figure 2d: Where is the World's Offshore Household Wealth Located - individual 
+* financial centers % of global household wealth
+********************************************************************************
+use "$work/ofw_aggregate", clear
+merge 1:1 year using "$temp/p_netfinwealth"
+
+foreach ofc in "HK" "SG" "US" "GB"{
+gen ofw_`ofc' = dep`ofc' / bis_total * ofw_other 
+}
+
+foreach ofc in "HK" "SG" "US" "GB" "CH"{
+gen share_`ofc' = ofw_`ofc'/ p_netfinwealth * 1000000000 * 100
+}
+
+label var share_CH "Switzerland"
+label var share_GB "United Kingdom"
+label var share_HK "Hong Kong"
+label var share_SG "Singapore"
+label var share_US "United States"
+// Offshore wealth hosted by individual financial center
+#delimit;
+twoway connected share_HK share_SG share_CH share_GB share_US year,
+msymbol(circle triangle square plus diamond) msize(small small small small small) 
+mcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5) mlcolor() mlwidth(thin thin thin thin thin) 
+lwidth(vthin vthin vthin vthin vthin) lcolor(gray lavender*1.5 midblue*1.5 red*1.5 emerald*1.5)
+graphregion(col(white)) plotregion(margin(none))
+legend(nobox ring(0) position(2) cols(1) size(vsmall) region(lstyle(none))) 
+xlabel(2001(1)2023, grid glcolor(black%20) glpattern(vshortdash) glwidth(thin) 
+angle(90) labsize(small) nogmin labgap(1) tstyle(minor)
+)
+ylabel(0 "0%" 1 "1%" 2 "2%" 3 "3%" 4 "4%", grid 
+glcolor(black%5) labsize(small) angle(horizontal) glpattern(line) glwidth(thin) 
+tstyle(minor) labgap(1)
+)
+xtitle("")
+ytitle("% of global household financial wealth", size(small))
+name(trendofc_wealth, replace);
+#delimit cr
+graph export "$fig/offshore-location-global-wealth-ofc-wealth.pdf", replace 
+
+
+********************************************************************************
+* Figure X: Development and Ownership of UK-Hosted Offshore
+********************************************************************************
+// Allocation of offshore wealth hosted by the UK
+use "$work/offshore2023.dta", clear
+keep if bank == "AE" 
+keep saver iso3saver namesaver bank amt_bis sh_bis year rawsh_bis europe
+
+reshape wide sh_bis amt_bis rawsh_bis, i(saver iso3saver namesaver year europe) j(bank) string
+
+
+// undo shell company correction
+
+foreach saver in GB CH BE NL IE US {
+replace saver = "`saver'" if saver == "`saver'H"
+}
+replace europe = europe[_n-1] if saver == saver[_n-1]
+
+collapse (sum) amt_bisAE sh_bisAE rawsh_bisAE, by(saver year europe)
+// sh_bisGB and sh_bisEU remain the same because the shell-company share was set to zero!
+
+gsort -sh_bisAE
+gen top10_shAE = _n
+
+gsort -rawsh_bisAE
+gen top10_rawshAE = _n
+
+label var sh_bisAE "corrected share"
+label var rawsh_bisAE "raw share"
+
+foreach var in sh_bisAE rawsh_bisAE{
+	replace `var' = `var'*100
+}
+
+#delimit;
+graph bar (asis) sh_bisAE rawsh_bisAE
+if saver=="IN"|saver=="GB"|saver=="US"|saver=="CH"|saver=="IT"|saver=="PK"
+|saver=="SA"|saver=="NL"|saver=="CN"|saver=="AT"|saver=="LU"|saver=="DE"
+|saver=="FR"|saver=="IR"|saver=="HU"|saver=="MU"|saver=="RU",
+over(saver, sort(top10_shAE) label(angle(90) labsize(small)
+labgap(1))) 
+graphregion(col(white)) 
+ylabel(0 "0%" 5 "5%" 10 "10%" 15 "15%" 20 "20%" 
+, tstyle(minor) grid angle(horizontal) glcolor(grey%10) glwidth(thin) 
+labsize(small) labgap(1)) 
+bargap(15)
+outergap(30)
+bar(1, color(emerald) lcolor(black) lwidth(vthin))
+bar(2, color(lavender) lcolor(black) lwidth(vthin))
+legend(nobox ring(0) position(3) cols(1) size(small) )
+title("Location of Ultimate Owners: UAE (2023)", size(medsmall))
+name(alloc, replace);
+#delimit cr
+
+graph combine trend alloc, col(1) xsize(5) ysize(7)
+graph export "$fig/AE_allocation.pdf", replace 
 
 
 
+	
+********************************************************************************
+* Appendix Figure: Where are the missing securities invested?
+********************************************************************************	
+	use "$work\Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta", clear
+	rename invested_in_* *
+	
+	gen area_lux = ireland + luxembourg
+	gen area_usa = area_lux + usa
+	gen area_cayman = area_usa + cayman_islands
+	gen area_other = area_cayman + other + japan
+	
+	label var ireland "Ireland"
+	label var area_lux "Luxembourg"
+	label var area_usa "USA"
+	label var area_cayman "Cayman Islands"
+	label var area_other "Other"
+	
+	#delimit;
+	twoway (area area_other year, fcolor(midblue*1.5) lcolor(black) lwidth(vthin)) 
+	(area area_cayman year, fcolor(bluishgray) lcolor(black) lwidth(vthin)) 
+	(area area_usa year, fcolor(lavender) lcolor(black) lwidth(vthin)) 
+	(area area_lux year, fcolor(emerald) lcolor(black) lwidth(vthin)) 
+	(area ireland year, fcolor(emerald*1.7) lcolor(black) lwidth(vthin)) 
+	if asset_type == "All Securities",
+	ylabel(0 "0" 2000 "2" 4000 "4" 6000 "6" 8000 "8" 10000 "10" 
+		, tstyle(minor) grid angle(horizontal) glcolor(grey%10) glwidth(thin) 
+	labsize(small) labgap(1)) 
+	legend(nobox ring(0) position(10) cols(1) size(small) )
+	ytitle("USD trillion", size(small))
+	xtitle("")
+	name(alloc, replace);
+	#delimit cr
+	graph export "$fig/missing_securities.pdf", replace 
 
+	
+	foreach var of varlist ireland luxembourg usa cayman japan other {
+		gen sh_`var' = `var' / discrepancy * 100
+	}
+	
+	
+********************************************************************************
+* Appendix Figure: Benchmark Beck et al.
+********************************************************************************	
+	
+	use "$work/ofw_aggregate.dta", clear
+	gen ofw_GB = depGB / bis_total * ofw_other 
+	merge 1:1 year using "$temp/missing_fundshares.dta"
+
+	#delimit;
+	graph bar (asis) ofw_GB missing_eqasset ofw_uk_beck 
+	if year > 2013 & year < 2022, 
+	over(year, label(labsize(small)))
+	graphregion(col(white)) 
+	ylabel(0 500  1000 1500 2000 2500 
+	, tstyle(minor) grid angle(horizontal) glcolor(grey%10) glwidth(thin) 
+	labsize(small) labgap(1)) 
+	ytitle("USD bn", size(small)) 
+	bargap(5)
+	outergap(70)
+	bar(1, color(emerald) lcolor(black) lwidth(vthin))
+	bar(2, color(bluishgray) lcolor(black) lwidth(vthin))
+	bar(3, color(red*1.5) lcolor(black) lwidth(vthin))
+	legend(nobox ring(0) position(11) cols(1) size(small) 
+	label(1  "Total offshore wealth managed in UK (FGMZ)")
+	label(2 "Missing Irish fund shares managed in UK (Beck et al.)") 
+	label(3 "of which managed on behalf of non-residents (est)")) 
+	name(beck, replace);
+	#delimit cr
+	graph export "$fig/benchmark_beck.pdf", replace 
+
+//----------------------------------------------------------------------------//

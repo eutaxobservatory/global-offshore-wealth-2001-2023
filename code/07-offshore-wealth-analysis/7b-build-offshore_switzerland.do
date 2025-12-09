@@ -1,4 +1,4 @@
-// ==============================================================================
+//----------------------------------------------------------------------------//
 // Paper: Global Offshore Wealth, 2001-2023
 //
 // Purpose: build a dataset of total offshore wealth in switzerland
@@ -10,7 +10,7 @@
 //				  - "$raw/snb_d5_1a_m33"
 //
 // outputs:       - "$work/offshore_wealth_in_switzerland_yearly.dta"                
-*===============================================================================
+//----------------------------------------------------------------------------//
 
 
 ********************************************************************************
@@ -62,8 +62,8 @@ save "$temp/snb_2e.dta", replace
 	import excel "$raw/snb/snb_d4_1a.xlsx", clear
 keep A B
 drop in 1/26
-gen year=substr(A,1,4)
-gen month=substr(A,6,7)
+gen year = substr(A,1,4)
+gen month = substr(A,6,7)
 destring year, replace
 destring month, replace
 *keep if month==12	
@@ -113,13 +113,13 @@ merge 1:1  year month using "$temp/snb_d4_1a.dta"
 
 drop _merge 
 
-gen swiss_fidu=.
+gen swiss_fidu = .
 
 replace swiss_fidu= (snb_d4_1a/1000 + snb_2e/1000)/chf_usd if year<=2014 & !(year==2014 & inlist(month,07,08,09,10,11,12)) // (SNB_D4_1a!I192/1000+SNB_2E!H193/1000)/SNB_FX!L60  until june 2013 
 
-replace swiss_fidu= (swiss_fidu_chf/1000000)/chf_usd if year>2014 // (SNB.MONA!B127/1000)/SNB_FX!L312 if year >2014 june
+replace swiss_fidu = (swiss_fidu_chf/1000000)/chf_usd if year>2014 // (SNB.MONA!B127/1000)/SNB_FX!L312 if year >2014 june
 
-replace swiss_fidu= (swiss_fidu_chf/1000000)/chf_usd if (year==2014 & inlist(month,07,08,09,10,11,12))
+replace swiss_fidu = (swiss_fidu_chf/1000000)/chf_usd if (year==2014 & inlist(month,07,08,09,10,11,12))
 
 keep year month swiss_fidu
 save "$temp/swiss_fidu.dta", replace
@@ -161,11 +161,11 @@ merge 1:1  year month using "$temp/snb_fx.dta"
 
 drop _merge 
 
-gen foreign_securities_foreigners=.
-replace foreign_securities_foreigners= (foreign_securities_chf / 0.968)/chf_usd/(1-0.06) if year<=2012 & !(year==2012 & month==12) //until nov 2012 
-replace foreign_securities_foreigners= (foreign_securities_chf / 0.968)/chf_usd if year>2012 // starting in dec 2012 
+gen foreign_securities_foreigners = .
+replace foreign_securities_foreigners = (foreign_securities_chf / 0.968)/chf_usd/(1-0.06) if year<=2012 & !(year==2012 & month==12) //until nov 2012 
+replace foreign_securities_foreigners = (foreign_securities_chf / 0.968)/chf_usd if year>2012 // starting in dec 2012 
 
-replace foreign_securities_foreigners= (foreign_securities_chf / 0.968)/chf_usd  if (year==2012 & month==12)
+replace foreign_securities_foreigners = (foreign_securities_chf / 0.968)/chf_usd  if (year==2012 & month==12)
 
 keep year month foreign_securities_foreigners
 save "$temp/swiss_foreign_securities_foreigners.dta", replace
@@ -208,7 +208,7 @@ quietly sum target_id
 local target_id=r(max)
 
 forvalues i=1/`target_id'{
-	replace swiss_foreign_sec_wrongswiss=swiss_foreign_sec_wrongswiss[_n+1]*foreign_securities_foreigners[_n]/foreign_securities_foreigners[_n+1] if year <=2013 & !(year==2013 & inlist(month,05,06,07,08,09,10,11,12))
+	replace swiss_foreign_sec_wrongswiss=swiss_foreign_sec_wrongswiss[_n+1]*foreign_securities_foreigners[_n]/foreign_securities_foreigners[_n+1] if year <= 2013 & !(year==2013 & inlist(month,05,06,07,08,09,10,11,12))
 	
 }	
 drop target_id	
@@ -245,11 +245,11 @@ notes: "Formulas and datasets were used as in sheet T.A7 of AJZ2017DataUpdated.x
 	
 save "$work/offshore_wealth_in_switzerland_monthly.dta", replace	
 
-keep if month==12
+keep if month == 12
 save "$work/offshore_wealth_in_switzerland_yearly.dta", replace	
 	
 
-
+//----------------------------------------------------------------------------//
 
 	
 	

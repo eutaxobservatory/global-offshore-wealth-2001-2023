@@ -1,4 +1,4 @@
-// ==============================================================================
+//----------------------------------------------------------------------------//
 // Paper: Global Offshore Wealth, 2001-2023
 // 
 // Purpose: merge swiss fiduciary and bis bank deposits; construct country 
@@ -13,7 +13,7 @@
 //
 // outputs:        - "$work/offshore"year".dta" files (files take 2001 to 2023 as "year")
 //                 
-//===============================================================================
+//----------------------------------------------------------------------------//
 
 ********************************************************************************
 
@@ -188,9 +188,6 @@ drop middle_east
 * Move Caribbean into Latin America
 replace latin_am=1 if caribbean==1
 drop caribbean
-* Guyana http://www.lseg.com/sites/default/files/content/
-* portogallo%20appendix%20A.pdf
-replace latin_am=0 if iso3=="GUY" 
 * Isolate Russia
 replace asia= 0 if iso3 == "RUS"
 gen russia = 0
@@ -289,7 +286,7 @@ foreach var of local fiduvar {
 * sh: corrected share taking into account wealth held through shell companies
 use "$work/offshore`i'", clear
 
-* Deal with shell and financial companies incorporated in GB, US, NL, etc. 		// Without this correction we would probably distribute a lot of offshore wealth to these countries as they own a lot of tax-haven deposits but we believe they are not the actual owners -> we reduce their 'real' share without dropping the shell-company share from the aggregates (by creating additional rows for the shell company-owned deposits instead of just dropping them). We classify the shell company owned deposits as tax havens and thereby include them in the redistribution mechanism below where they are distributed back to non-havens.
+* Deal with shell and financial companies incorporated in GB, US, NL, etc. 		// Without this correction we would distribute a lot of offshore wealth to these countries as they own a lot of tax-haven deposits but we believe they are not the actual owners -> we reduce their 'real' share without dropping the shell-company share from the aggregates (by creating additional rows for the shell company-owned deposits instead of just dropping them). We classify the shell company owned deposits as tax havens and thereby include them in the redistribution mechanism below where they are distributed back to non-havens.
 foreach saver in GB CH BE NL IE US {
 	if "`saver'" == "CH" local share_shell = 1.00 // treat Switzerland as tax haven
 	if "`saver'" == "IE" local share_shell = 0.75 // financial companies
@@ -630,4 +627,4 @@ keep if bank == "CH"
 	save "$work/offshore`i'", replace 
 	restore
 	}
-	
+//----------------------------------------------------------------------------//

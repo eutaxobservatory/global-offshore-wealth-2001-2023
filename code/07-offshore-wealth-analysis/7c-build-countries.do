@@ -1,4 +1,4 @@
-// =============================================================================
+//----------------------------------------------------------------------------//
 // Paper: Global Offshore Wealth, 2001-2023
 //
 // Purpose: build a simpler dataset of each country offshore wealth in total, 
@@ -19,8 +19,7 @@
 //                 - "$raw/AJZ2017DataUpdated.xlsx",sheet(ctrybyctry01-23) 
 //                 - "$work/countries"
 //                 
-// =============================================================================
-
+//----------------------------------------------------------------------------//
 
 ********************************************************************************
 
@@ -223,11 +222,11 @@ forvalues i = 2001/2023 {
 	replace haven_group1 = "total_russia_adjustment" if haven_group == 10
 	gen unit = "USD Bn"
 	gen label = ""
-	replace label = "offshore wealth in American tax havens" ///
+	replace label = "offshore wealth in American financial centers" ///
 	if haven_group1 == "americ"
-	replace label = "offshore wealth in Asian tax havens" ///
+	replace label = "offshore wealth in Asian financial centers" ///
 	if haven_group1 == "asian"
-	replace label = "offshore wealth in European tax havens" ///
+	replace label = "offshore wealth in European financial centers" ///
 	if haven_group1 == "europe"
 	replace label = "total offshore wealth" if haven_group1 == "total"
 	replace label = "offshore wealth in Switzerland" if haven_group1 == "swiss"
@@ -288,5 +287,5 @@ forvalues i = 2001/2023 {
 			save "$work/countries", replace
 			
 			
-********************************************************************************
+//----------------------------------------------------------------------------//
 			
