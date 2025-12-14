@@ -19,7 +19,7 @@
 /*Source:
 // source: IMF,	CDIS
 // website: https://data.imf.org/?sk=40313609-f037-48c1-84b1-e1f1ce54d6d5
-*/
+
 import delimited "$raw\CDIS_12-11-2024 21-24-20-45_timeSeries.csv", clear 
 
 * UAE does not report to the CDIS so we have to use outward investment by other country towards UAE
@@ -28,6 +28,10 @@ keep if counterpartcountryname == "United Arab Emirates"
 keep if indicatorcode == "IOW_BP6_USD" 
 drop v23
 *v8 = 2009
+save "$raw/CDIS_12-11-2024 21-24-20-45_timeSeries_UAE_IOW_BP6_USD.dta"
+*/
+use "$raw/CDIS_12-11-2024 21-24-20-45_timeSeries_UAE_IOW_BP6_USD.dta", clear
+
 reshape long v, i(countryname  attribute) j(year)
 destring v, replace ignore(C)
 
