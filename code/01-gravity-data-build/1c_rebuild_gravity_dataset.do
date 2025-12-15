@@ -27,7 +27,7 @@
 // 1. bilateral portfolio assets from cpis
 //----------------------------------------------------------------------------//
 
-import delimited "$raw\cpis/CPIS_09-17-2024 19-05-25-63_timeSeries.csv", varnames(nonames) clear // row 17 (no update)
+import delimited "$raw\IMF_CPIS_09-17-2024 19-05-25-63_timeSeries.csv", varnames(nonames) clear // row 17 (no update)
 
 
 // prepare dataset
@@ -714,6 +714,7 @@ save "$temp\data_gravity_update.dta", replace
 
 
 //----------------------------------------------------------------------------//
+
 
 
 
