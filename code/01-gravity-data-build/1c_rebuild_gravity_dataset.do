@@ -7,7 +7,7 @@
 	* gravity variables from the GeoDist database (Mayer and Zignago 2011)
 	* GDP from World Bank WDI / EWN / World Inequality Database / UN / extrapolation	
 //
-// databases used: - "$raw\cpis/CPIS_09-17-2024 19-05-25-63_timeSeries.csv"
+// databases used: - "$raw\IMF_CPIS_09-17-2024 19-05-25-63_timeSeries.csv"
 //                 - "$raw\Gravity_dta_V202211\Gravity_V202211.dta"
 //                 - "$raw\Gravity_dta_V202211\Countries_V202211.dta"
 //                 - "$raw\cepii\geo_cepii.dta"
@@ -714,6 +714,7 @@ save "$temp\data_gravity_update.dta", replace
 
 
 //----------------------------------------------------------------------------//
+
 
 
 
