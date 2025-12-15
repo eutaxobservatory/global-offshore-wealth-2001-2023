@@ -9,7 +9,7 @@
 // from this dataset and proceed to compute the shares seen in total direct investment 
 // in a specific haven.   
 //  
-// databases used: - "$raw/CDIS/direct-investment-position-20250402"
+// databases used: - "$raw/IMF_CDIS_direct-investment-position-20250402"
 //       		   - "$work/havens_list.dta"
 //       
 // outputs:        - "$work/fdi-havens.dta"
@@ -20,7 +20,7 @@
 ********************************************************************************
 * Clean the completed direct investment position dataset: 
 	* website:https://data.imf.org/en/Data-Explorer?datasetUrn=IMF.STA:DIP(12.0.0)  , IMF, Dataset: "Direct Investment Positions by Counterpart Economy (formerly CDIS)"
-	import delimited using "$raw/CDIS/direct-investment-position-20250402", clear 
+	import delimited using "$raw/IMF_CDIS_direct-investment-position-20250402", clear 
 ********************************************************************************
 
 	* keep only official reported data 
@@ -250,3 +250,4 @@ duplicates drop
 		
 		
 	
+
