@@ -3,7 +3,7 @@
 //
 // Purpose: import BIS locational banking statistics 
 //
-// databases used: - "$raw/full_lbs_d_pub_csv/WS_LBS_D_PUB_csv_col.csv"
+// databases used: - "$raw/BIS_full_lbs_d_pub_csv/WS_LBS_D_PUB_csv_col.csv"
 //
 // outputs:        - "$work/locational.dta" 
 //----------------------------------------------------------------------------//
@@ -16,7 +16,7 @@
 
 // import online BIS banking statistics 
 
-insheet using "$raw/full_lbs_d_pub_csv/WS_LBS_D_PUB_csv_col.csv", clear
+insheet using "$raw/BIS_full_lbs_d_pub_csv/WS_LBS_D_PUB_csv_col.csv", clear
 // note:  Q:S:C:D:USD:F:GB:A:DE:N:FR:N
 // refers to quarterly (Q) outstanding (S) claims (C) of debt securities
 // (D) denominated in USD (USD) as a foreign currency (F) 
@@ -120,3 +120,4 @@ save "$work/locational.dta", replace
 
 
 //----------------------------------------------------------------------------//
+
