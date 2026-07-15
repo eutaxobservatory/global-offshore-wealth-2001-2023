@@ -10,14 +10,20 @@
 //                 - "$raw/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_2.csv"
 //                 - "$work/offshore_wealth_in_switzerland_yearly.dta"
 //                 - "$work/bisdepbyhaven_hh.dta"
-//                 - "$work/offshore`i'"
 //                 - "$work/assembled_gdp_series.dta"
 //                 - "$work/countries"
 //                 - "$raw/dta/country_frame"
+//                 - "$work/offshore`i'"
+// 				   - "$work/offshore`i'_no_smoothing.dta" 
+// 				   - "$work/offshore`i'_no_hhshell.dta" 
+// 				   - "$work/offshore`i'_minus10pp_hhshell.dta" 
+// 				   - "$work/offshore`i'_70russiacyprus.dta" 
+// 				   - "$work/offshore`i'_90russiacyprus.dta"
+
 // 
 // outputs:        - "$work/ofw_aggregate"
-//                 - "$raw/AJZ2017DataUpdated.xlsx",sheet(ctrybyctry01-23) 
-//                 - "$work/countries"
+//                 - "$raw/AJZ2017DataUpdated`suffix'.xlsx",sheet(ctrybyctry01-23) 
+//                 - "$work/countries`suffix'"
 //                 
 //----------------------------------------------------------------------------//
 
@@ -28,6 +34,7 @@
 *******************************************************************************
 
 * add deposits total offshore portfolio financial wealth
+* (does not depend on offshore`i' variant — computed once outside the suffix loop)
 
 
 import excel "$raw/AJZ2017bData.xlsx", clear firstrow ///
@@ -103,6 +110,23 @@ gen ofw_CH_pct = ofw_CH / worldgdp
 keep year ofw ofw_ajz ofw_CH ofw_other ofw_americ ofw_asia ofw_europ dep* bis*  worldgdp								
 save "$work/ofw_aggregate", replace
 
+
+
+
+
+
+
+
+
+
+*--------------0.1 - Suffix loop over all sensitivity assumptions  -----------*
+local suffix_tags "main no_smoothing no_hhshell minus10pp_hhshell 70russiacyprus 90russiacyprus"
+foreach tag of local suffix_tags {
+local suffix "_`tag'"
+if "`tag'" == "main" local suffix ""
+
+use "$work/ofw_aggregate", clear
+
 // compute each haven's offshore wealth in USD bn
 foreach region in "americ" "asia" "europ" {
 gen `region'_pct = bis_`region' / bis_total * ofw_other / ofw * 100
@@ -140,7 +164,7 @@ forvalues i = 2001/2023 {
 * Then we add the amount attracted by each tax haven
 forvalues i = 2001/2023 {
 	use "$temp/attracted_`i'", clear
-	merge 1:m year using "$work/offshore`i'", nogenerate
+	merge 1:m year using "$work/offshore`i'`suffix'", nogenerate
 	replace year = `i'
 	* Compute country level offshore wealth using the shares (from offshore)
 	* and the aggregates (from AJZ), including for our three indicators 
@@ -250,11 +274,11 @@ forvalues i = 2001/2023 {
 	drop if iso3 == "BEH" | iso3 == "CHH" | iso3 == "GBH" | ///
 	iso3 == "IEH" | iso3 == "NLH" | iso3 == "USH" | iso == "TWH"
 	if year == 2001 {
-		save "$work/countries", replace
+		save "$work/countries`suffix'", replace
 		}
 		if year ~= 2001 {
-			append using "$work/countries"
-			save "$work/countries", replace
+			append using "$work/countries`suffix'"
+			save "$work/countries`suffix'", replace
 			}
 			sleep 500
 			erase "$temp/attracted_`i'.dta"
@@ -264,7 +288,7 @@ forvalues i = 2001/2023 {
 // merge GDP and clean
 			use "$work/assembled_gdp_series.dta", clear
 			keep iso3 year gdp_current_dollars
-			merge 1:m year iso3 using "$work/countries", keep(2 3) nogenerate
+			merge 1:m year iso3 using "$work/countries`suffix'", keep(2 3) nogenerate
 			merge m:1 iso3 using "$raw/dta/country_frame", keepusing(country_name incomelevel regionname) keep(1 3) nogenerate
 			* give to Netherlands Antilles the incomelevelgroup and region of curaçao
 			replace country_name = "Netherlands Antilles" if iso3 == "ANT"
@@ -282,10 +306,11 @@ forvalues i = 2001/2023 {
 			drop europe asia latin_am africa
 			order year iso3 country_name indicator label unit value gdp regionname incomelevelname
 			sort year iso3 indicator
-			export excel using "$raw/AJZ2017DataUpdated.xlsx", ///
+			export excel using "$raw/AJZ2017DataUpdated`suffix'.xlsx", ///
 			sheet(ctrybyctry01-23) firstrow(variables) sheetreplace
-			save "$work/countries", replace
+			save "$work/countries`suffix'", replace
 			
-			
+
+} // end foreach suffix
 //----------------------------------------------------------------------------//
-			
+

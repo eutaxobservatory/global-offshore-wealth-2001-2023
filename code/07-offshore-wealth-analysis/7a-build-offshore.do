@@ -7,14 +7,54 @@
 //
 // databases used: - "$work/bis-deposits-all-01-23"
 //				   - "$raw/assumptions/ofc_and_dep_assumptions.xlsx"
-//				   - "$work\assembled_gdp_series.dta"
+//				   - "$work/assembled_gdp_series.dta"
 //				   - "$work/fiduciary-87-23.dta"
+//                 - "$work/fiduciary-87-23_70russiacyprus.dta", replace
+//                 - "$work/fiduciary-87-23_90russiacyprus.dta", replace
 //				   - "$work/fdi-havens"
 //
 // outputs:        - "$work/offshore"year".dta" files (files take 2001 to 2023 as "year")
+// 				   - "$work/offshore"year"_no_smoothing.dta" files (files take 2001 to 2023 as "year")
+// 				   - "$work/offshore"year"_no_hhshell.dta" files (files take 2001 to 2023 as "year")
+// 				   - "$work/offshore"year"_minus10pp_hhshell.dta" files (files take 2001 to 2023 as "year")
+// 				   - "$work/offshore"year"_70russiacyprus.dta" files (files take 2001 to 2023 as "year")
+// 				   - "$work/offshore"year"_90russiacyprus.dta" files (files take 2001 to 2023 as "year")
 //                 
 //----------------------------------------------------------------------------//
 
+*--------------0.0 - assumptions   ---------------------*
+* Final datasets without a suffix: 0.5_smoothing and preferred 
+* Final datasets with a suffix: for all the alternative assumptions (exclusively)
+
+
+
+*--------------0.1 - 5-year moving-average weights assumption   ---------------------*
+local smoothing_assumption "no_smoothing 0.5_smoothing"
+foreach smoothing of local smoothing_assumption{
+
+*--------------0.2 - Household-shell-company reallocation rule assumption  ---------------------*
+local hh_shell_assumption "no_hhshell minus10pp_hhshell preferred"
+foreach hh_shell of local hh_shell_assumption{
+	 * Skip: hh_shell varies but smoothing is no_smoothing (not a scenario we want)
+if "`hh_shell'" != "preferred" & "`smoothing'" == "no_smoothing" continue
+
+*--------------0.3 - Adjust Russia-Cyprus assumption  ---------------------*
+foreach russiacyprus in  "_70russiacyprus" "_90russiacyprus" "" {
+	* Only run russia-cyprus alternatives for main analysis
+    if "`russiacyprus'" != "" & !("`smoothing'"=="0.5_smoothing" & "`hh_shell'"=="preferred") continue
+
+    * Set suffix
+local suffix "_`hh_shell'"
+if "`smoothing'" == "0.5_smoothing" & "`hh_shell'" == "preferred" &  "`russiacyprus'"== "_70russiacyprus" local suffix "_70russiacyprus"
+if "`smoothing'" == "0.5_smoothing" & "`hh_shell'" == "preferred" & "`russiacyprus'"== "_90russiacyprus" local suffix "_90russiacyprus"
+if "`smoothing'" == "0.5_smoothing" & "`hh_shell'" == "preferred" & "`russiacyprus'"== "" local suffix ""
+if "`smoothing'" == "no_smoothing"  & "`hh_shell'" == "preferred" local suffix "_no_smoothing"
+display "`suffix'"
+
+
+
+
+* 
 ********************************************************************************
 
 **************** I ---- Load BIS locational banking stats -----*****************
@@ -58,7 +98,8 @@ forvalues i = 2001/2023 {
 			clear firstrow cellrange(A1:X24) sheet(sharehouseholddep)
 			keep if year == `i' 
 			merge 1:m year using `bisbilat`i'', nogenerate
-			gen AS = 0.7															// assumption: 70% of deposits in Asian tax havens (not bilaterally available) belong to households
+			gen AS = 0.7		// assumption: 70% of deposits in Asian tax havens (not bilaterally available) belong to households	
+			do "$do/08-revision-sensitivity/apply_hhshare_scenario.do" 												
 			foreach bank in CH AE AS GG IM JE PA LU CY MO MY KY BE AT BH BM BS ///
 			HK SG GB US CL AN CW { 
 				replace dep`bank' = `bank'*dep`bank' if year == `i' 
@@ -95,7 +136,7 @@ save `bisbilat`i'', replace
   
  * Add GDP. The main source is the World Bank, but we make use of different 
  * ones when no info is available for a specific countries
-use "$work\assembled_gdp_series.dta", clear
+use "$work/assembled_gdp_series.dta", clear
 drop gdp_source
 keep if year == `i'
 rename gdp_current_dollars gdp`i'
@@ -133,7 +174,7 @@ save `bisbilat`i'', replace
 
 **------------------ I.2 - Adjustments to fiduciary --------------------------** 
 * Read fiduciary accounts in Switzerland
-use "$work/fiduciary-87-23.dta", clear
+use "$work/fiduciary-87-23`russiacyprus'.dta", clear
 
 * Collapse fiduciary to one year
 keep if year == `i'
@@ -240,7 +281,7 @@ foreach var of local fiduvar {
 	replace namebank="Switzerland" if bank=="CH"
 	replace iso3bank="CHE" if bank=="CH"
 	drop if bank==""
-	save "$work/offshore`i'.dta", replace
+	save "$work/offshore`i'`suffix'.dta", replace
 	merge m:1 iso3saver using `fiduciary`i'', ///
 	keepusing(euro16 rich developing haven north_am latin_am gcc russia ///
 	asia africa europe eu) update nogenerate 
@@ -273,7 +314,7 @@ foreach var of local fiduvar {
 				
 				sort bank saver
 				sleep 3000
-				save "$work/offshore`i'", replace
+				save "$work/offshore`i'`suffix'", replace
 
 ********************************************************************************
 
@@ -284,16 +325,34 @@ foreach var of local fiduvar {
 **-------------------------------- III.1 - -----------------------------------**
 * rawsh: share not taking into account shell companies
 * sh: corrected share taking into account wealth held through shell companies
-use "$work/offshore`i'", clear
+use "$work/offshore`i'`suffix'", clear
 
 * Deal with shell and financial companies incorporated in GB, US, NL, etc. 		// Without this correction we would distribute a lot of offshore wealth to these countries as they own a lot of tax-haven deposits but we believe they are not the actual owners -> we reduce their 'real' share without dropping the shell-company share from the aggregates (by creating additional rows for the shell company-owned deposits instead of just dropping them). We classify the shell company owned deposits as tax havens and thereby include them in the redistribution mechanism below where they are distributed back to non-havens.
 foreach saver in GB CH BE NL IE US {
-	if "`saver'" == "CH" local share_shell = 1.00 // treat Switzerland as tax haven
-	if "`saver'" == "IE" local share_shell = 0.75 // financial companies
-	if "`saver'" == "GB" local share_shell = 0.5  // shells + financial companies + non-doms
-	if "`saver'" == "NL" local share_shell = 0.75 // shells + financial companies
-	if "`saver'" == "BE" local share_shell = 0.5  // shells + financial companies
-	if "`saver'" == "US" local share_shell = 0.2  // Delaware shell + financial companies
+	if "`hh_shell'"=="minus10pp_hhshell" & "`smoothing'"== "0.5_smoothing" {
+		if "`saver'" == "CH" local share_shell = 1.00 // treat Switzerland as tax haven
+		if "`saver'" == "IE" local share_shell = 0.65 // financial companies
+		if "`saver'" == "GB" local share_shell = 0.4  // shells + financial companies + non-doms
+		if "`saver'" == "NL" local share_shell = 0.65 // shells + financial companies
+		if "`saver'" == "BE" local share_shell = 0.4  // shells + financial companies
+		if "`saver'" == "US" local share_shell = 0.1  // Delaware shell + financial companies
+	}	
+	else if "`hh_shell'"=="no_hhshell" & "`smoothing'"== "0.5_smoothing"{
+		if "`saver'" == "CH" local share_shell = 1.00 // treat Switzerland as tax haven
+		if "`saver'" == "IE" local share_shell = 0 // financial companies
+		if "`saver'" == "GB" local share_shell = 0  // shells + financial companies + non-doms
+		if "`saver'" == "NL" local share_shell = 0 // shells + financial companies
+		if "`saver'" == "BE" local share_shell = 0  // shells + financial companies
+		if "`saver'" == "US" local share_shell = 0  // Delaware shell + financial companies
+	}
+	else {
+		if "`saver'" == "CH" local share_shell = 1.00 // treat Switzerland as tax haven
+		if "`saver'" == "IE" local share_shell = 0.75 // financial companies
+		if "`saver'" == "GB" local share_shell = 0.5  // shells + financial companies + non-doms
+		if "`saver'" == "NL" local share_shell = 0.75 // shells + financial companies
+		if "`saver'" == "BE" local share_shell = 0.5  // shells + financial companies
+		if "`saver'" == "US" local share_shell = 0.2  // Delaware shell + financial companies
+	}
 	expand 2 if saver == "`saver'", gen(new`saver')										// duplicate deposits in shell company countries
 	replace saver = "`saver'H" if new`saver' == 1 
 	drop new`saver'
@@ -339,7 +398,7 @@ foreach saver in GB CH BE NL IE US {
 						haven!=1 & bank=="`b'"
 						}
 						}
-						save "$work/offshore`i'", replace
+						save "$work/offshore`i'`suffix'", replace
 						
 						* Compute share BIS deposits in all tax havens 		
 						* (needs to be done post allocation of shell)
@@ -368,7 +427,7 @@ foreach saver in GB CH BE NL IE US {
 							i(iso3saver) j(bank) string
 							keep if bank == "OC" | bank == "HA"
 							save `total', replace
-							use "$work/offshore`i'", clear
+							use "$work/offshore`i'`suffix'", clear
 							append using `total'
 							keep if bank=="OC" | bank == "CH" | bank =="HA"
 							replace namebank="All havens" if bank=="HA"
@@ -383,7 +442,7 @@ foreach saver in GB CH BE NL IE US {
 								}
 								save `total', replace
 								* Offshore is a dataset of bilateral deposits and fiduciary accounts
-								use "$work/offshore`i'", clear
+								use "$work/offshore`i'`suffix'", clear
 								merge 1:1 bank iso3saver using `total', ///
 								update nogenerate
 								replace namesaver = "US Minor Islands" ///
@@ -402,7 +461,7 @@ foreach saver in GB CH BE NL IE US {
 								order saver iso3saver namesaver sh_fidu* /// 
 								shgdp gdp* 
 								sort namesaver
-								save "$work/offshore`i'", replace
+								save "$work/offshore`i'`suffix'", replace
  
 **-------------------------------- III.2 - -----------------------------------**
 * In this section, we keep country deposits in haven groups (OC is 
@@ -483,12 +542,18 @@ keep if bank == "CH"
 	merge 1:1 iso3saver using `countries`x_3'', nogenerate
 	merge 1:1 iso3saver using `countries`x_4'', nogenerate
 	foreach b in fidu CR EU AS OC bis fidu_fdi_adjustment fidu_rus_adjustment {
-	gen sh_`b'_smthg`x' = (sh_`b'`x_1' + sh_`b'`x_4')*0.1 + ///
-	(sh_`b'`x_2'+ sh_`b'`x_3')*0.2 + sh_`b'`x'*0.4
-	replace sh_`b'_smthg`x' = sh_`b'`x' if sh_`b'_smthg`x' == .
-	drop sh_`b'`x_1' sh_`b'`x_4' sh_`b'`x_2' sh_`b'`x_3' sh_`b'`x'
+		if "`smoothing'"=="no_smoothing" & "`hh_shell'"=="preferred"{
+			gen sh_`b'_smthg`x' = sh_`b'`x'
+			
+		}
+		else {
+			gen sh_`b'_smthg`x' = (sh_`b'`x_1' + sh_`b'`x_4')*0.1 + ///
+			(sh_`b'`x_2'+ sh_`b'`x_3')*0.2 + sh_`b'`x'*0.4
+			replace sh_`b'_smthg`x' = sh_`b'`x' if sh_`b'_smthg`x' == .
+		}
+		drop sh_`b'`x_1' sh_`b'`x_4' sh_`b'`x_2' sh_`b'`x_3' sh_`b'`x'
 	}
-	merge 1:m namesaver using "$work/offshore`x'", nogenerate
+	merge 1:m namesaver using "$work/offshore`x'`suffix'", nogenerate
 	drop gdp`x_1' gdp`x_2' gdp`x_3' gdp`x_4' 
 	
 	* labels
@@ -536,39 +601,60 @@ keep if bank == "CH"
 	sh_EU_smthg sh_OC_smthg sh_fidu_smthg sh_fidu_fdi_adjustment_smthg sh_fidu_rus_adjustment_smthg gdp shgdp continent rich developing haven ///
 	europe asia russia north_am latin_am gcc africa  
     sort namesaver
-	save "$work/offshore`x'", replace 
+	save "$work/offshore`x'`suffix'", replace 
  }
  
-	* We adapt the computation when we can't use t-2, t-1, t+1, or t+2. 
-	* In our case it's for 2001, 2002, 2022, 2023
-	* We also deal with missing values for certain years
- 	use `countries2001', replace
-	merge 1:1 iso3saver using `countries2002', nogenerate
-	merge 1:1 iso3saver using `countries2003', nogenerate
-	merge 1:1 iso3saver using `countries2004', nogenerate
-	merge 1:1 iso3saver using `countries2022', nogenerate
-	merge 1:1 iso3saver using `countries2023', nogenerate
-	merge 1:1 iso3saver using `countries2020', nogenerate
-	merge 1:1 iso3saver using `countries2021', nogenerate
-	foreach b in fidu fidu_fdi_adjustment fidu_rus_adjustment CR EU AS OC bis {
-	gen sh_`b'_smthg2001 = ///
-	((sh_`b'2003)*0.1 + (sh_`b'2002)*0.2 + sh_`b'2001*0.4) / 0.7
-	gen sh_`b'_smthg2002 = ///
-	((sh_`b'2004)*0.1 + (sh_`b'2003 + sh_`b'2001)*0.2 + sh_`b'2002*0.4) / 0.9
-	gen sh_`b'_smthg2022 = ///
-	(sh_`b'2020*0.1 + (sh_`b'2023 + sh_`b'2021)*0.2 + sh_`b'2022*0.4) / 0.9
-	gen sh_`b'_smthg2023 = ///
-	(sh_`b'2021*0.1 + 0.2*sh_`b'2022 + 0.4*sh_`b'2023) / 0.7
-	replace sh_`b'_smthg2001 = ///
-	sh_`b'2001 if sh_`b'_smthg2001 == . 
-	replace sh_`b'_smthg2002 = ///
-	(sh_`b'2002*0.4 + sh_`b'2004*0.1) / 0.5 if sh_`b'_smthg2002 == . 
-	replace sh_`b'_smthg2002 = ///
-	sh_`b'2002 if sh_`b'_smthg2002 == . 
-	drop sh_`b'2002 sh_`b'2003 sh_`b'2004 sh_`b'2022 sh_`b'2023 sh_`b'2020 ///
-	sh_`b'2021 
+	if "`smoothing'"=="no_smoothing" & "`hh_shell'"=="preferred"{
+		use `countries2001', replace
+		merge 1:1 iso3saver using `countries2002', nogenerate
+		merge 1:1 iso3saver using `countries2003', nogenerate
+		merge 1:1 iso3saver using `countries2004', nogenerate
+		merge 1:1 iso3saver using `countries2022', nogenerate
+		merge 1:1 iso3saver using `countries2023', nogenerate
+		merge 1:1 iso3saver using `countries2020', nogenerate
+		merge 1:1 iso3saver using `countries2021', nogenerate
+		foreach b in fidu fidu_fdi_adjustment fidu_rus_adjustment CR EU AS OC bis {
+		gen sh_`b'_smthg2001 = sh_`b'2001
+		gen sh_`b'_smthg2002 = sh_`b'2002
+		gen sh_`b'_smthg2022 = sh_`b'2022
+		gen sh_`b'_smthg2023 = sh_`b'2023
+		drop sh_`b'2002 sh_`b'2003 sh_`b'2004 sh_`b'2022 sh_`b'2023 sh_`b'2020 ///
+		sh_`b'2021 
+	}
+	}
+	else 	{
+		* We adapt the computation when we can't use t-2, t-1, t+1, or t+2. 
+		* In our case it's for 2001, 2002, 2022, 2023
+		* We also deal with missing values for certain years
+		use `countries2001', replace
+		merge 1:1 iso3saver using `countries2002', nogenerate
+		merge 1:1 iso3saver using `countries2003', nogenerate
+		merge 1:1 iso3saver using `countries2004', nogenerate
+		merge 1:1 iso3saver using `countries2022', nogenerate
+		merge 1:1 iso3saver using `countries2023', nogenerate
+		merge 1:1 iso3saver using `countries2020', nogenerate
+		merge 1:1 iso3saver using `countries2021', nogenerate
+		foreach b in fidu fidu_fdi_adjustment fidu_rus_adjustment CR EU AS OC bis {
+		gen sh_`b'_smthg2001 = ///
+		((sh_`b'2003)*0.1 + (sh_`b'2002)*0.2 + sh_`b'2001*0.4) / 0.7
+		gen sh_`b'_smthg2002 = ///
+		((sh_`b'2004)*0.1 + (sh_`b'2003 + sh_`b'2001)*0.2 + sh_`b'2002*0.4) / 0.9
+		gen sh_`b'_smthg2022 = ///
+		(sh_`b'2020*0.1 + (sh_`b'2023 + sh_`b'2021)*0.2 + sh_`b'2022*0.4) / 0.9
+		gen sh_`b'_smthg2023 = ///
+		(sh_`b'2021*0.1 + 0.2*sh_`b'2022 + 0.4*sh_`b'2023) / 0.7
+		replace sh_`b'_smthg2001 = ///
+		sh_`b'2001 if sh_`b'_smthg2001 == . 
+		replace sh_`b'_smthg2002 = ///
+		(sh_`b'2002*0.4 + sh_`b'2004*0.1) / 0.5 if sh_`b'_smthg2002 == . 
+		replace sh_`b'_smthg2002 = ///
+		sh_`b'2002 if sh_`b'_smthg2002 == . 
+		drop sh_`b'2002 sh_`b'2003 sh_`b'2004 sh_`b'2022 sh_`b'2023 sh_`b'2020 ///
+		sh_`b'2021 
+		}
 	}
 	
+
 	* 
 	forvalues i = 2001/2023 {
 	if inlist(`i', 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, ///
@@ -576,7 +662,7 @@ keep if bank == "CH"
 	preserve
 	keep namesaver saver sh_fidu_rus_adjustment_smthg`i' sh_fidu_fdi_adjustment_smthg`i' sh_fidu_smthg`i' sh_CR_smthg`i' sh_EU_smthg`i' ///
 	sh_AS_smthg`i' sh_OC_smthg`i' sh_bis_smthg`i' gdp`i' shgdp continent
-	merge 1:m namesaver using "$work/offshore`i'", nogenerate
+	merge 1:m namesaver using "$work/offshore`i'`suffix'", nogenerate
 	
 	* labels
 	label var year "Year"
@@ -624,7 +710,11 @@ keep if bank == "CH"
     europe asia russia north_am latin_am gcc africa  
     sort namesaver
 	sleep 6000
-	save "$work/offshore`i'", replace 
+	save "$work/offshore`i'`suffix'", replace
 	restore
 	}
+
+} // end foreach russiacyprus
+} // end for hh_shell
+} // end for smoothing
 //----------------------------------------------------------------------------//
