@@ -71,6 +71,11 @@ cap log close
 	// graph offshore wealth estimates
 	do "$do/07-offshore-wealth-analysis/7d-graph-paper.do"
 
+ // 8. Robustness checks  
+	// table with robustness checks for Russia-Cyprus allocation, 5-year moving-average weights assumption, also for the Household-shell-company reallocation rule assumption
+	do "$do/08-revision-sensitivity/8a-robustness_check_table.do"
+
+
 /// . Erase datasets 	
 
 		***** Temporary datasets folder
@@ -140,9 +145,9 @@ cap log close
 
 /*
 /// Y. Produce public datasets from confidential ones
-	//Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands  => "$raw\dta\KY_liab_nfc.dta"
+	//Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands  => "$raw/dta/KY_liab_nfc.dta"
 	do "$do/XX-memo/1_memo-export_Cayman_Islands_Compustat.do"
-	//Bilateral BIS data provided by AJZ  => "$raw\dta\AJZ_bisshares0607.dta"
+	//Bilateral BIS data provided by AJZ  => "$raw/dta/AJZ_bisshares0607.dta"
 	do "$do/XX-memo/4_memo_export_AJZ_bisshares0607.do"
 	
 */

@@ -5,7 +5,7 @@
 // spanning 1987 to 2023
 //
 // databases used: - "$raw/snb/snb-data-fiduciary-yearly.csv"
-//                 - "$raw\dta\iso3_ifs.dta"
+//                 - "$raw/dta/iso3_ifs.dta"
 //                 - "$raw/Exchange_Rates_incl_Switzerland.xlsx"
 //                 - "$raw/fiduciary_1976-2014.dta"
 //                 - "$raw/snb/snb-data-fiduciary-yearly-domestic.csv"
@@ -14,10 +14,21 @@
 //                 - "$work/havens_list.dta"
 //
 // outputs:        - "$work/fiduciary-87-23_uncorr.dta"
+//                 - "$work/fiduciary-87-23_uncorr_70russiacyprus.dta", replace
+//                 - "$work/fiduciary-87-23_uncorr_90russiacyprus.dta", replace
+
 //                 - "$work/fiduciary-87-23.dta", replace
+//                 - "$work/fiduciary-87-23_70russiacyprus.dta", replace
+//                 - "$work/fiduciary-87-23_90russiacyprus.dta", replace
+
 //----------------------------------------------------------------------------//
 
-
+*--------------0.1 - Adjust Russia-Cyprus assumption ---------------------*
+local cyprus_russia_adjustment "0.7 0.9 0.8"
+foreach cyprus_russia_share of local cyprus_russia_adjustment {
+if "`cyprus_russia_share'"=="0.7" local suffix "_70russiacyprus"
+if "`cyprus_russia_share'"=="0.9" local suffix "_90russiacyprus"
+if "`cyprus_russia_share'"=="0.8" local suffix ""
 
 ********************************************************************************
 ****** I ---- Cleaning and country code merge of SNB fiduciary data -----*******
@@ -32,7 +43,7 @@ destring year lfidu, replace
 tempfile fiduciary1
 save `fiduciary1'
 *---------------I.2 - Merge fiduciary accounts to ISO codes---------------------*
-use "$raw\dta\iso3_ifs.dta", clear
+use "$raw/dta/iso3_ifs.dta", clear
 keep iso3 region region_name chart_name 
 drop if iso3 == ""
 duplicates drop
@@ -72,7 +83,7 @@ tempfile fiduciary3
 save `fiduciary3'
 
 *-----------I.5 - MERGE USD FIDUCIARY ACCOUNTS TO IFS COUNTRY CODES------------*
-use "$raw\dta\iso3_ifs.dta", clear
+use "$raw/dta/iso3_ifs.dta", clear
 keep ifscode iso3
 *replace ifscode = 371 if iso3 == "VGB"
 rename iso3 ccode
@@ -337,9 +348,9 @@ gen lfidu2dol_russia_adjustment = lfidu2dol
 forvalues i = 2001/2023 { 
 	sum lfidu2dol if ccode == "CYP" & year == `i'
 	local amount2 = r(sum)
-	replace lfidu2dol_russia_adjustment = lfidu2dol_russia_adjustment + 0.8* `amount2' ///
+	replace lfidu2dol_russia_adjustment = lfidu2dol_russia_adjustment + `cyprus_russia_share'* `amount2' ///
 	if ccode == "RUS" & year == `i'
-	replace lfidu2dol_russia_adjustment = lfidu2dol_russia_adjustment - 0.8* `amount2' ///
+	replace lfidu2dol_russia_adjustment = lfidu2dol_russia_adjustment - `cyprus_russia_share'* `amount2' ///
 	if ccode == "CYP" & year == `i'
 }
 
@@ -493,9 +504,11 @@ sort ifscode year
 preserve
 drop lfidu lfidudol lfidu2 lfidu2dol
 rename *_orig *
-save "$work/fiduciary-87-23_uncorr.dta", replace
+save "$work/fiduciary-87-23_uncorr`suffix'.dta", replace
 restore
 drop *orig
-save "$work/fiduciary-87-23.dta", replace
+save "$work/fiduciary-87-23`suffix'.dta", replace
+
+}
 
 //----------------------------------------------------------------------------//
