@@ -55,7 +55,7 @@ forvalues i = 2001/2023 {
 
 			* Fractions of non-bank deposits which are tax evading household
 			import excel "$raw/assumptions/ofc_and_dep_assumptions.xlsx", ///
-			clear firstrow cellrange(A1:X24) sheet(sharehouseholddep_${hh_scenario})
+			clear firstrow cellrange(A1:X24) sheet(sharehouseholddep)
 			keep if year == `i' 
 			merge 1:m year using `bisbilat`i'', nogenerate
 			gen AS = 0.7															// assumption: 70% of deposits in Asian tax havens (not bilaterally available) belong to households
