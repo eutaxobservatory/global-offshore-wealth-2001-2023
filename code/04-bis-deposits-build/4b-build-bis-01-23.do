@@ -559,7 +559,7 @@ drop share
 	tempfile bis
 	save `bis'
 	import excel "$raw/assumptions/ofc_and_dep_assumptions.xlsx", ///
-	clear firstrow cellrange(A1:W23) sheet(sharehouseholddep) // no need of UAE for the moment 
+	clear firstrow cellrange(A1:W23) sheet(sharehouseholddep_${hh_scenario}) // no need of UAE for the moment 
 	merge 1:m year using "`bis'", nogenerate	
 	
 	foreach bank in GG IM JE LU AT BE GB{										// European OFCs (Cyprus' share =1, so no need to adjust )
@@ -787,7 +787,7 @@ restore
 append using `uae'
 
 preserve
-	import excel using "$raw/assumptions/ofc_and_dep_assumptions.xlsx",	clear firstrow cellrange(A1:X24) sheet(sharehouseholddep)
+	import excel using "$raw/assumptions/ofc_and_dep_assumptions.xlsx",	clear firstrow cellrange(A1:X24) sheet(sharehouseholddep_${hh_scenario})
 	rename * v_*
 	rename v_year year
 	reshape long v_, i(year) j(bank) string
