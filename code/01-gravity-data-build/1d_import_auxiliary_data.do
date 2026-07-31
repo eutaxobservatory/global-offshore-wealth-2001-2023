@@ -498,8 +498,8 @@ drop if cu == ""
 tempfile xrates
 save `xrates'
 
-/* Confidential data
-import delimited "$raw\cayman-compustat-2025.csv", parselocale(en_US) clear // Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands. 
+* Confidential data
+/*import delimited "$raw\cayman-compustat-2025.csv", parselocale(en_US) clear // Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands. 
 
 // loc = headquarter
 // cshoc = number of common shares outstanding
@@ -543,9 +543,19 @@ drop _merge
 gen mktcap_usd = mktcap / xrate
 collapse (sum) mktcap_usd , by(year)
 gen eqliab_nfc = 0.75 * mktcap_usd
-
 save "$raw\dta\KY_liab_nfc.dta", replace
 */
+
+use "$raw\dta\KY_liab_nfc.dta", clear
+save "$raw\dta\KY_liab_nfc_baseline.dta", replace
+drop eqliab_nfc
+gen eqliab_nfc = 0.65 * mktcap_usd
+save "$raw\dta\KY_liab_nfc_lowerbound.dta", replace
+
+drop eqliab_nfc
+gen eqliab_nfc = 0.85 * mktcap_usd
+save "$raw\dta\KY_liab_nfc_upperbound.dta", replace
+
 
 //----------------------------------------------------------------------------//
 // China's assets
@@ -838,7 +848,7 @@ gen missing_eqasset = holdings_of_irl_funds - eqasset
 label var missing_eqasset "Irish fund shares without owner in CPIS (Beck et al.)"
 // Some of these missing assets are likely owned by UK residents = "onshore":
 // According to Beck et al. (Table 1: Fund unwind: summary statistics) Irish 
-// investment fonds have bond holdings worth EUR 1,2 tn bn on behalf of 
+// investment fonds have bond holdings worth EUR 1.2 tn bn on behalf of 
 // non-EA investors. They also state that EUR 474 bn of these bond holdings were
 // denominated in GBP. This corresponds to 40% of total bond 
 // holdings of Irish investment funds on behalf of non-EA investors 
@@ -864,64 +874,78 @@ gen fundshares_gb_missing = fundshares_gb - eqasset if year == 2020
 label var fundshares_gb_missing "Missing Irish fund shares owned by UK residents (est)"
 
 * compute share of missing UK-IE assets which are likely onshore
-gen onshore_share = fundshares_gb_missing / missing_eqasset // 31% 
+gen onshore_share = fundshares_gb_missing / missing_eqasset
 
-* assume fixed share of onshore in missing Irish fund holdings 
-// (not reported in CPIS) to create series for 2014-2021 and correct cpis assets
-sum onshore_share
-local onshore_share r(mean)
-replace onshore_share = `onshore_share' if onshore_share == .
-replace fundshares_gb_missing = missing_eqasset * onshore_share
+sum onshore_share, meanonly
+local baseline = r(mean)
+local lower    = `baseline' - 0.10
+local upper    = `baseline' + 0.10
 
-* fill missing years based on assumed share in total UK equity assets
-merge 1:1 source year using "$temp\data_toteq_update.dta"
-keep if _merge == 3	
-drop _merge
-	
-gen missing_uk_share = fundshares_gb_missing / sumeqasset
-/*view share
-graph bar (asis) missing_uk_share if year > 2013, over(year) title(`"Missing Irish fund shares owned by UK residents in % of total CPIS-reported UK assets"', size(medsmall))
-*/
+di "Baseline: `baseline'"
+di "Lower:    `lower'"
+di "Upper:    `upper'"
 
-*predict missing years based on share of missing in total UK assets
-reg missing_uk_share year
-predict missing_uk_share_hat
 
-label var missing_uk_share "missing uk assets"
-label var missing_uk_share_hat "fitted values"
+* Produce UK equity asset estimates under three scenarios
+foreach scen in baseline lowerbound upperbound {
 
-replace missing_uk_share_hat = missing_uk_share if year > 2013 & year <=2021
+    preserve
+		* Select assumed onshore share
+		if "`scen'" == "baseline" {
+			local share = `baseline'
+		}
+		else if "`scen'" == "lowerbound" {
+			local share = `lower'
+		}
+		else if "`scen'" == "upperbound" {
+			local share = `upper'
+		}
 
-/*view prediction
-graph bar (asis) missing_uk_share missing_uk_share_hat, over(year, label(angle(ninety))) title(`"Missing UK-owned Irish fund shares as a share of total CPIS-reported UK assets"', size(medsmall)) legend(nobox ring(0) position(10) cols(1) size(small) region(lstyle(none)))
-*/
-gen missing_eqasset_uk = missing_uk_share_hat * sumeqasset
-label var missing_eqasset_uk "Irish fund shares managed in UK on behalf of UK residents"
+		di "Scenario: `scen'   Share: `share'"
 
-/*check
-preserve
-gen missing_eqasset_uk_fitted = missing_eqasset_uk / 1000
-label var missing_eqasset_uk_fitted "fitted values"
-graph bar (asis) missing_eqasset_uk_fitted , over(year, label(angle(ninety))) ytitle(`"USD bn"') title(`"Missing UK-owned Irish investment fund shares, USD bn"', size(medsmall))
-graph export "$fig/UK_IE_onshore.pdf", replace
-restore
-*/
-preserve
-keep host source year missing_eqasset_uk
-save "$temp\missing_uk_eqassets.dta", replace
-restore
+		* Apply assumed share
+		replace fundshares_gb_missing = missing_eqasset * `share'
 
-* prepare benchmark for OFW series
+		* Fill missing years based on assumed share in total UK equity assets
+		merge 1:1 source year using "$temp\data_toteq_update.dta"
+		keep if _merge == 3
+		drop _merge
+
+		gen missing_uk_share = fundshares_gb_missing / sumeqasset
+
+		* Predict missing years
+		reg missing_uk_share year
+		predict missing_uk_share_hat
+
+		replace missing_uk_share_hat = missing_uk_share ///
+			if year > 2013 & year <= 2021
+
+		gen missing_eqasset_uk = missing_uk_share_hat * sumeqasset
+		label var missing_eqasset_uk "Irish fund shares managed in UK on behalf of UK residents"
+
+		keep host source year missing_eqasset_uk
+
+		save "$temp\missing_uk_eqassets_`scen'.dta", replace
+
+	restore
+}
+
+
+* Produce benchmark dataset for OFW series (baseline only)
+
+replace fundshares_gb_missing = missing_eqasset * `baseline'
+
 gen ofw_uk_beck = missing_eqasset - fundshares_gb_missing
 label var ofw_uk_beck "Irish fund shares managed in UK on behalf of non-residents"
-*convert to USD bn
-foreach var in ofw_uk_beck missing_eqasset{
-	replace `var' = `var' / 1000
+
+* Convert to USD bn
+foreach var in ofw_uk_beck missing_eqasset {
+    replace `var' = `var'/1000
 }
-keep year missing_eqasset ofw_uk_beck 
+
+keep year missing_eqasset ofw_uk_beck
+
 save "$temp\missing_fundshares.dta", replace
-
-
 
 //----------------------------------------------------------------------------//
 // World Inequality Database: Global personal financial wealth
@@ -934,6 +958,7 @@ bys country : gen price_index = value if var=="inyixx999i"
 collapse p_finasset p_liab price_index, by(country year)
 keep if country == "WO-MER"
 keep if year >= 2001 & year < 2024
+gen p_netfinwealth2 = p_finasset - p_liab
 foreach var in p_finasset p_liab{
 	replace `var' = `var' * price_index
 }
@@ -942,3 +967,29 @@ keep year p_netfinwealth
 save "$temp\p_netfinwealth.dta", replace
 
 //----------------------------------------------------------------------------//
+// Alternative deposit share in offshore wealth (sensitivity analysis)
+*OECD
+import delimited "$raw\assumptions\OECD_2026_financial_indicators.csv", clear 
+keep if v10 == "Share of currency and deposits in financial assets of households and NPISH"
+keep if time_period >= 2001 & time_period <= 2023
+bysort referencearea: egen N = count(time_period)
+keep if N == 23
+drop N
+*27 OECD countries
+collapse (mean) obs_value, by(time_period)
+rename (time_period obs_value) (year dep_share)
+replace dep_share = dep_share / 100		
+tempfile dep_share
+save `dep_share', replace
+
+*FRED
+import excel "$raw\assumptions\Board of Governors of the Federal Reserve System 2026 - Financial assets.xlsx", sheet("Quarterly") firstrow clear
+gen dep_share_top10 =  ( WFRBLTOP1DE+ WFRBLDEN09) / (WFRBLT01004 + WFRBLN09031)
+gen dep_share_bottom50 = WFRBLDEB50/ WFRBLB50085
+gen year = year(observation_date)
+collapse (mean) dep_share_top10 dep_share_bottom50, by(year)
+merge 1:1 year using `dep_share', nogen
+save "$temp/dep_share.dta", replace
+
+//----------------------------------------------------------------------------//
+
