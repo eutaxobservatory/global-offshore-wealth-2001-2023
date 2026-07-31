@@ -10,6 +10,19 @@ clear
 set graphics off
 set more off
 cap log close
+
+
+********************************************************************************
+/// Assumptions
+
+* Select specifications
+global KYfile baseline
+global UKfile baseline
+global hh_scenario baseline
+
+
+*add UKfile options to build matrices
+
 ********************************************************************************
 /// Part I: The global portfolio asset liability gap
 ********************************************************************************
@@ -65,12 +78,30 @@ cap log close
 	// build swiss offshore wealth data 
 	do "$do/07-offshore-wealth-analysis/7b-build-offshore_switzerland.do"	
 	
+	// build global offshore wealth estimate 
+	do "$do/07-offshore-wealth-analysis/7c-build-global.do"
+	
 	// build country offshore wealth data 
-	do "$do/07-offshore-wealth-analysis/7c-build-countries.do"
+	do "$do/07-offshore-wealth-analysis/7d-build-countries.do"
 	
 	// graph offshore wealth estimates
-	do "$do/07-offshore-wealth-analysis/7d-graph-paper.do"
+	* do "$do/07-offshore-wealth-analysis/7e-graph-paper.do"
 
+	
+// 8. Sensitivity analysis - modify key assumptions
+
+	// global estimate
+	do "$do/08-sensitivity/8a-sensitivity-global.do"
+
+	// allocation across financial centers
+	do "$do/08-sensitivity/8b-sensitivity-hhshare-ofc.do"
+	
+	// reduce Euro Area share 
+	do "$do/08-sensitivity/8c-sensitivity-ea-ofc.do"
+
+	// outputs
+	do "$do/08-sensitivity/8d-outputs.do"
+	
 /// . Erase datasets 	
 
 		***** Temporary datasets folder
