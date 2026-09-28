@@ -27,6 +27,12 @@
 //
 //----------------------------------------------------------------------------//
 
+// Clean in case of running do-file multiple times
+capture drop logeqp logdebtp
+capture drop _I*
+capture eststo clear
+capture estimates clear
+
 //----------------------------------------------------------------------------//
 // Gravity-like Model
 //----------------------------------------------------------------------------//
