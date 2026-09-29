@@ -22,6 +22,9 @@ label var ofw_UKub "UK Lower Bound (Onshore share 0.41)" // note higher onshore 
 save "$work/sensitivity_global.dta", replace
 
 
+********************************************************************************
+* Figure 13: Sensitivity of Offshore Wealth Allocation Across Financial Centers
+********************************************************************************
 
 // allocation of offshore wealth to financial centers
 use "$work/ofw_aggregate.dta", clear
@@ -81,9 +84,12 @@ xtitle("") ///
 ytitle("% of Global Offshore Financial Wealth", size(small));
 
 #delimit cr
-graph export "$fig/sensitivity/sensitivity_ofc_hh_shares.pdf", replace 
+graph export "$fig/fig-13-sensitivity_ofc_hh_shares.pdf", replace 
 
 
+********************************************************************************
+* Figure A.18: Sensitivity: Offshore Wealth in Top 6 Financial Centers, % of Total
+********************************************************************************
 
 use "$work/ofw_aggregate_hh_freeze.dta", clear
 foreach ofc in "HK" "SG" "US" "GB" "LU" {
@@ -121,10 +127,13 @@ ytitle("% of the wealth held in all financial centers", size(small))
 name(trendofc2, replace);
 #delimit cr
 
-graph export "$fig/sensitivity/sensitivity_ofc_hh_shares2.pdf", replace 
+graph export "$fig/fig-A18-sensitivity_ofc_hh_shares2.pdf", replace 
 
 
 
+********************************************************************************
+* Figure A.19: Sensitivity: Reallocation of Intra-Euro Area Offshore Wealth
+********************************************************************************
 
 // Euro area correction
 *Austria, Belgium, Cyprus, Luxembourg, Malta, 
