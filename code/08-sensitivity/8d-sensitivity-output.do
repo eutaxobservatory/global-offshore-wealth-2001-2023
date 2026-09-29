@@ -6,7 +6,7 @@
 
 // global estimate
 use "$work/sensitivity_global.dta", clear
-keep year ofw_baseline ofw_dep2 ofw_dep3 ofw_KY* ofw_UK* worldgdp
+keep year ofw_baseline ofw_tph ofw_dep2 ofw_dep3 ofw_KY* ofw_UK* worldgdp
 foreach var of varlist ofw_dep* ofw_UK* ofw_KY* ofw_base{
 	replace `var' = `var' / worldgdp 
 }
