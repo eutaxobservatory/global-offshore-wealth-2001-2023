@@ -4,6 +4,20 @@
 // Purpose: Extract tables and figures for paper revision
 //----------------------------------------------------------------------------//
 
+// databases used: - $work/sensitivity_global.dta
+//                 - $work/ofw_aggregate.dta
+//                 - $work/ofw_aggregate_hh_allone.dta
+//                 - $work/ofw_aggregate_hh_freeze.dta
+//                 - $raw/IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx
+//                 - $work/countries
+
+// outputs:        - Fig13: $fig/fig-13-sensitivity_ofc_hh_shares.pdf
+//                 - Fig A18: $fig/fig-A18-sensitivity_ofc_hh_shares2.pdf
+//                 - Fig A19: $fig/fig-A19-ofw-owned-by-region-total-ofw-tph.pdf
+
+
+
+
 // global estimate
 use "$work/sensitivity_global.dta", clear
 keep year ofw_baseline ofw_tph ofw_dep2 ofw_dep3 ofw_KY* ofw_UK* worldgdp
@@ -85,6 +99,7 @@ ytitle("% of Global Offshore Financial Wealth", size(small));
 
 #delimit cr
 graph export "$fig/fig-13-sensitivity_ofc_hh_shares.pdf", replace 
+graph export "$fig/eps/fig-13-sensitivity_ofc_hh_shares.eps", replace 
 
 
 ********************************************************************************
@@ -128,12 +143,39 @@ name(trendofc2, replace);
 #delimit cr
 
 graph export "$fig/fig-A18-sensitivity_ofc_hh_shares2.pdf", replace 
+graph export "$fig/eps/fig-A18-sensitivity_ofc_hh_shares2.eps", replace 
 
 
 
 ********************************************************************************
 * Figure A.19: Sensitivity: Reallocation of Intra-Euro Area Offshore Wealth
 ********************************************************************************
+
+// Add potentially recorded intra-euro area offshore wealth
+*extract xrate
+import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
+foreach v of varlist E-AB {
+    rename `v' v_`=`v'[7]'
+}
+drop in 1/7
+reshape long v_, i(B) j(year) string
+rename (v_ B) (xrate country)
+keep country year xrate
+replace xrate = "." if xrate == "..."
+destring year xrate, replace ignore(-)
+
+keep if country == "Euro Area"
+keep year xrate
+rename xrate xrate_eur
+gen tph = 400 if year == 2014 // third-party holdings of Euro Area custodians now correctly attributed to Euro Area investors
+replace tph= tph / xrate_eur
+sum tph
+local mean_tph = r(mean)
+display `mean_tph'
+*485.46
+
+
+use "$work/ofw_aggregate.dta", clear
 
 // Euro area correction
 *Austria, Belgium, Cyprus, Luxembourg, Malta, 
@@ -147,7 +189,7 @@ gen share_EA = depEA / bis_total * ofw_other / ofw * 100
 *share_EA has declined from 9% in 2013 to 5% in 2023.
 gen ofw_EA = share_EA* ofw / 100
 *EUR 760 Bn in 2013; 645 bn in 2023
-gen share_tph = `mean_tph'/ ofw_EA if year == 2014 	//60% 
+gen share_tph = `mean_tph' / ofw_EA if year == 2014 	//60% 
 gen share_EA_europ = ofw_EA / ofw_europ
 keep year share_EA_europ
 tempfile share_EA_europ
@@ -228,6 +270,8 @@ gen select = 1 if nobs < 22
 replace select = 1 if iso3 == "BEL"| iso3=="RUS"
 keep if select == 1
 export excel year iso3 value change using "$tables\sensitivity_country_allocation_EA.xlsx", sheetmodify firstrow(variables)
+restore
+
 
 *** plot both versions
 
@@ -483,7 +527,8 @@ graph combine g_east_asia_pacific g_europe_central_asia g_latin_america_caribbea
     graphregion(margin(5 5 5 5)) ///
     xsize(20) ysize(40)
 
-graph export "$fig/sensitivity/ofw-owned-by-region-total-ofw-tph.pdf", replace 
+graph export "$fig/fig-A19-ofw-owned-by-region-total-ofw-tph.pdf", replace 
+graph export "$fig/eps/fig-A19-ofw-owned-by-region-total-ofw-tph.eps", replace 
 
 
 //----------------------------------------------------------------------------//
