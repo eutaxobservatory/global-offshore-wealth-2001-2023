@@ -6,6 +6,7 @@
 //
 //----------------------------------------------------------------------------//
 
+*version 19         // code written and run with Stata/MP 19.0
 clear
 set graphics off
 set more off
@@ -19,7 +20,9 @@ cap log close
 global KYfile baseline
 global UKfile baseline
 global hh_scenario baseline
-
+global smoothing_assumption baseline   // baseline | no_smoothing
+global hh_shell_assumption baseline    // baseline | minus10pp_hhshell | no_hhshell
+global russiacyprus baseline           // baseline | 70russiacyprus | 90russiacyprus
 
 *add UKfile options to build matrices
 
@@ -85,7 +88,7 @@ global hh_scenario baseline
 	do "$do/07-offshore-wealth-analysis/7d-build-countries.do"
 	
 	// graph offshore wealth estimates
-	* do "$do/07-offshore-wealth-analysis/7e-graph-paper.do"
+	do "$do/07-offshore-wealth-analysis/7e-graph-paper.do"
 
 	
 // 8. Sensitivity analysis - modify key assumptions
@@ -95,12 +98,15 @@ global hh_scenario baseline
 
 	// allocation across financial centers
 	do "$do/08-sensitivity/8b-sensitivity-hhshare-ofc.do"
-	
+
 	// reduce Euro Area share 
 	do "$do/08-sensitivity/8c-sensitivity-ea-ofc.do"
 
+	// Cyprus-Russia, household-shell and smoothing assumptions
+	do "$do/08-sensitivity/8d-sensitivity-cyprusrussia-shell-smooth.do"
+
 	// outputs
-	do "$do/08-sensitivity/8d-outputs.do"
+	do "$do/08-sensitivity/8e-sensitivity-output.do"
 	
 /// . Erase datasets 	
 
@@ -131,8 +137,8 @@ global hh_scenario baseline
 
 	***** Work datasets folder
 	local folder "$work"
-	* Explicit list of .dta files to keep
-	local keep "global_portfolio_gap.dta locational.dta ofw_aggregate.dta countries.dta fiduciary-87-23_uncorr.dta Table_A1_Global_Cross_Border_Securities_Assets.dta Table_A2_Global_Cross_Border_Securities_Liabilities.dta Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta"
+	* List of .dta files to keep (* = any characters, e.g. countries*.dta keeps countries_EA.dta)
+	local keep "global_portfolio_gap.dta locational.dta ofw_aggregate*.dta countries*.dta sensitivity_global.dta sensitivity_country_allocation_2023.dta fiduciary-87-23_uncorr.dta Table_A1_Global_Cross_Border_Securities_Assets.dta Table_A2_Global_Cross_Border_Securities_Liabilities.dta Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta"
 	* Get all .dta files in the folder
 	local files : dir "`folder'" files "*.dta"
 	* Loop through all files
@@ -144,7 +150,7 @@ global hh_scenario baseline
 		* Check if file is in the keep list
 		foreach k of local keep {
 			local k_clean = lower(trim("`k'"))
-			if "`f_clean'" == "`k_clean'" {
+			if strmatch("`f_clean'", "`k_clean'") {
 				local keep_file = 1
 			}
 		}
@@ -174,7 +180,7 @@ global hh_scenario baseline
 	//Compustat Global – Security Daily for the end-of-year market value of all listed firms incorporated in the Cayman Islands  => "$raw\dta\KY_liab_nfc.dta"
 	do "$do/XX-memo/1_memo-export_Cayman_Islands_Compustat.do"
 	//Bilateral BIS data provided by AJZ  => "$raw\dta\AJZ_bisshares0607.dta"
-	do "$do/XX-memo/4_memo_export_AJZ_bisshares0607.do"
+	do "$do/XX-memo/4_memo-export_AJZ_bisshares0607.do"
 	
 */
 

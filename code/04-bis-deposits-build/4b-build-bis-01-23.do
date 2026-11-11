@@ -824,11 +824,11 @@ merge 1:1 year saver using "$work/distributions_1R_china.dta", nogenerate
 			legend(order(1 "orig" 2 "adj AT CA (2007)" 3 "adj ES (2012)" 4 "adj MO (2013)" 5 "adj HK IT (2014)" 6 "china (2016)")) by(saver) name(`saver', replace)
 			}
 			graph combine BR CN DE FR
-			graph export "$fig\adjustments\distr_1R_1.pdf", as(pdf) name("Graph") replace
+			graph export "$fig/adjustments/distr_1R_1.pdf", as(pdf) name("Graph") replace
 			graph combine GB JP NL SA
-			graph export "$fig\adjustments\distr_1R_2.pdf", as(pdf) name("Graph") replace
+			graph export "$fig/adjustments/distr_1R_2.pdf", as(pdf) name("Graph") replace
 			graph combine SG US TW
-			graph export "$fig\adjustments\distr_1R_3.pdf", as(pdf) name("Graph") replace
+			graph export "$fig/adjustments/distr_1R_3.pdf", as(pdf) name("Graph") replace
 */
 						
 //----------------------------------------------------------------------------//

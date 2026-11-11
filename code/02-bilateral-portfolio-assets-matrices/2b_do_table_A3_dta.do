@@ -14,7 +14,7 @@
 //----------------------------------------------------------------------------//
 
 // Path to the excel 
-global myexcel "$tables\FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
+global myexcel "$tables/FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
 
 // Initialize dataset with years 2001–2023
 // Equities sub-dataset 
@@ -36,7 +36,7 @@ save `main_debt', replace
 
 
 
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname eqliab_host derivedeqliab_host gapeq_host debtliab_host deriveddebtliab_host gapdebt_host, by(host year)
 
@@ -120,7 +120,7 @@ sort asset_type year
 
 // Col. 1 
 preserve 
-use "$work\Table_A1_Global_Cross_Border_Securities_Assets.dta", clear
+use "$work/Table_A1_Global_Cross_Border_Securities_Assets.dta", clear
 keep year asset_type total_securities_assets
 tempfile temp1
 save `temp1'
@@ -130,7 +130,7 @@ merge 1:1 year asset_type using `temp1', nogen
 
 // Col. 2 
 preserve 
-use "$work\Table_A2_Global_Cross_Border_Securities_Liabilities.dta", clear
+use "$work/Table_A2_Global_Cross_Border_Securities_Liabilities.dta", clear
 keep year asset_type total_securities_liabilities
 tempfile temp1
 save `temp1'
@@ -195,7 +195,7 @@ label data "Table A3 – Global Discrepancy Between Cross-Border Securities Asse
 // ------------------
 // Save final dataset
 // ------------------
-save "$work\Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta", replace
+save "$work/Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta", replace
 *use "$work\Table_A3_Global_Discrepancy_Between_Cross_Border_Securities_Assets_and_Liabilities.dta", clear
 // Export to Excel
 export excel using "$myexcel", sheet("Table A3") firstrow(varlabels) sheetmodify

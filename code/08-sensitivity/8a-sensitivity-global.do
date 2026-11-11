@@ -5,6 +5,10 @@
 // runs relevant do-files with different assumptions
 //
 //----------------------------------------------------------------------------//
+* Select specifications
+//global KYfile baseline
+//global UKfile baseline
+//global hh_scenario baseline
 
 use "$work/ofw_aggregate.dta", clear
 rename ofw ofw_baseline
@@ -84,6 +88,8 @@ save "$work/sensitivity_global.dta", replace
 // restore baseline version
 global KYfile baseline
 global UKfile baseline
+// rebuild baseline matrices and portfolio gap (last run above used UKfile upperbound)
+do "$do/02-bilateral-portfolio-assets-matrices/2a_do_full_matrices.do"
 use "$work/ofw_aggregate_baseline.dta", clear
 rename ofw_baseline ofw 
 save "$work/ofw_aggregate.dta", replace
@@ -91,7 +97,7 @@ save "$work/ofw_aggregate.dta", replace
 
 // Add potentially recorded intra-euro area offshore wealth
 *extract xrate
-import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
+import excel "$raw/IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
 foreach v of varlist E-AB {
     rename `v' v_`=`v'[7]'
 }

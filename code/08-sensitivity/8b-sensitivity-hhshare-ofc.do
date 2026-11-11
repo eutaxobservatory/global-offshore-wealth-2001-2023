@@ -39,10 +39,19 @@ foreach scenario in allone freeze hk_low hk_high  {
 }
 
 * Restore baseline
+global hh_scenario baseline
+
+// rebuild baseline BIS deposits and offshore`i' files (last run above used hk_high)
+do "$do/04-bis-deposits-build/4b-build-bis-01-23.do"
+do "$do/07-offshore-wealth-analysis/7a-build-offshore.do"
+
 copy "$work/ofw_aggregate_baseline.dta" ///
 	 "$work/ofw_aggregate.dta", replace
 
 copy "$work/countries_baseline.dta" ///
 	 "$work/countries.dta", replace
+
+// rebuild baseline AJZ2017DataUpdated.xlsx (overwritten by each scenario above)
+do "$do/07-offshore-wealth-analysis/7d-build-countries.do"
 //----------------------------------------------------------------------------//
 

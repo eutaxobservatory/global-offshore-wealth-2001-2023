@@ -20,7 +20,7 @@
 // source: IMF,	CDIS
 // website: https://data.imf.org/?sk=40313609-f037-48c1-84b1-e1f1ce54d6d5
 
-import delimited "$raw\CDIS_12-11-2024 21-24-20-45_timeSeries.csv", clear 
+import delimited "$raw/CDIS_12-11-2024 21-24-20-45_timeSeries.csv", clear 
 
 * UAE does not report to the CDIS so we have to use outward investment by other country towards UAE
 keep if counterpartcountryname == "United Arab Emirates"

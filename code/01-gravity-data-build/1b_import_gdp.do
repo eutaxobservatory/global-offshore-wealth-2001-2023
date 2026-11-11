@@ -58,6 +58,7 @@ rename countrycode iso3
 tempfile wbgdp
 save    `wbgdp', replace 
 
+
 * * * C. Third preference is UNSD
 import delimited "$raw/input/UNdata.csv", clear
 
@@ -83,7 +84,7 @@ save    `ungdp', replace
 
 
 * * * D. Fourth is External Wealth of Nations (which is largely sourced from above)
-import excel "$raw\ewn\EWN-database-January-2025.xlsx", sheet("Dataset") firstrow clear 
+import excel "$raw/ewn/EWN-database-January-2025.xlsx", sheet("Dataset") firstrow clear 
 
 * Cleaning country codes
 isocodes Country, gen(iso3c)
@@ -154,6 +155,6 @@ bys iso3 (year): ipolate gdp_final year, epolate gen(gdp_current_dollars)
 replace gdp_source = gdp_source + "- Extrapolated" if gdp_current_dollars != . & gdp_final == . 
 
 keep iso3 year gdp_current_dollars gdp_source
-save "$work\assembled_gdp_series.dta", replace 
+save "$work/assembled_gdp_series.dta", replace 
 
 //----------------------------------------------------------------------------//

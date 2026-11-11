@@ -14,21 +14,17 @@
 //                 - "$work/havens_list.dta"
 //
 // outputs:        - "$work/fiduciary-87-23_uncorr.dta"
-//                 - "$work/fiduciary-87-23_uncorr_70russiacyprus.dta", replace
-//                 - "$work/fiduciary-87-23_uncorr_90russiacyprus.dta", replace
-
 //                 - "$work/fiduciary-87-23.dta", replace
-//                 - "$work/fiduciary-87-23_70russiacyprus.dta", replace
-//                 - "$work/fiduciary-87-23_90russiacyprus.dta", replace
-
 //----------------------------------------------------------------------------//
 
 *--------------0.1 - Adjust Russia-Cyprus assumption (sensitivity analysis) ---*
-local cyprus_russia_adjustment "0.7 0.9 0.8"
-foreach cyprus_russia_share of local cyprus_russia_adjustment {
-if "`cyprus_russia_share'"=="0.7" local suffix "_70russiacyprus"
-if "`cyprus_russia_share'"=="0.9" local suffix "_90russiacyprus"
-if "`cyprus_russia_share'"=="0.8" local suffix ""
+local cyprus_russia_share = 0.8
+if "$russiacyprus" == "70russiacyprus" local cyprus_russia_share = 0.7
+if "$russiacyprus" == "90russiacyprus" local cyprus_russia_share = 0.9
+local suffix ""
+if !inlist("$russiacyprus", "", "baseline") local suffix "_$russiacyprus"
+
+
 
 ********************************************************************************
 ****** I ---- Cleaning and country code merge of SNB fiduciary data -----*******
@@ -509,6 +505,6 @@ restore
 drop *orig
 save "$work/fiduciary-87-23`suffix'.dta", replace
 
-}
+
 
 //----------------------------------------------------------------------------//

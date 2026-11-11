@@ -24,7 +24,7 @@ gen ofw_EA = share_EA* ofw / 100
 *EUR 760 Bn in 2013; 645 bn in 2023
 gen share_EA_europ = ofw_EA / ofw_europ
 keep year share_EA_europ
-save "$temp\share_EA_europ.dta", replace
+save "$temp/share_EA_europ.dta", replace
 */
 
 // Offshore wealth held in European OFCs

@@ -1,0 +1,17 @@
+# Intermediate data: keep folders, ignore contents
+temp/*
+!temp/.gitkeep.txt
+work-data/*
+!work-data/.gitkeep.txt
+tables/*
+!tables/.gitkeep.txt
+
+# EPS figures: keep empty folder on GitHub
+figures/eps/*
+!figures/eps/.gitkeep
+
+# PDF figures
+figures/*.pdf
+
+# macOS
+.DS_Store

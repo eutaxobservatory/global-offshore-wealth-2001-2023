@@ -14,7 +14,7 @@
 //----------------------------------------------------------------------------//
 
 // Path to the excel 
-global myexcel "$tables\FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
+global myexcel "$tables/FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
 
 // Initialize dataset with years 2001–2023
 // Equities sub-dataset 
@@ -35,7 +35,7 @@ save `main_debt', replace
 
 
 // Col. (1)
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt, by(host year)
 
@@ -66,7 +66,7 @@ save `main'
 
 
 // Col. (3): no portfolio debt data in EWNII, but data in IMF IIP or derived debt liab 
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt, by(host year)
 
@@ -97,7 +97,7 @@ tempfile main
 save `main'
 
 // Col. (4): Dutch SFIs
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 
 keep if host == 138
 collapse (mean) lequity_SFI ldebt_SFI, by(year)
@@ -125,7 +125,7 @@ save `main'
 
 
 // col. (5): raw cpis derived liabilities > reported liabilities
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
@@ -157,7 +157,7 @@ tempfile main
 save `main'
 
 // Col. (6), (6b): Cayman Islands
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
 
@@ -189,7 +189,7 @@ save `main'
 
 
 // Col (7): Small OFCs
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
 
@@ -218,7 +218,7 @@ save `main'
 
 
 // Col. (9): Other Non EWN countries
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
 
@@ -247,7 +247,7 @@ save `main'
 
 
 // Col. (10): International Organizations
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
 
@@ -276,7 +276,7 @@ tempfile main
 save `main'
 
 // Col. (11): Total
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 sort host year source
 collapse (first) hostname ewn_host lequity_host lportif_debt_host eqliab_host derivedeqliab_host  deriveddebtliab_host debtliab_host gapeq_host gapdebt_host missingliabeq missingliabdebt ofc_host, by(host year)
 
@@ -305,7 +305,7 @@ save `main'
 
 
 // Col (2): IMF IIPs
-use "$temp\IIP_eqliab.dta", clear
+use "$temp/IIP_eqliab.dta", clear
 replace eqliab_IIP = eqliab_IIP / 1000
 rename eqliab_IIP imf_iips
 keep year imf_iips
@@ -314,7 +314,7 @@ merge 1:1 year asset_type using `main', nogen
 tempfile main
 save `main'
 
-use "$temp\IIP_debtliab.dta", clear
+use "$temp/IIP_debtliab.dta", clear
 replace debtliab_IIP = debtliab_IIP / 1000
 rename debtliab_IIP imf_iips
 keep year imf_iips
@@ -387,7 +387,7 @@ label data "Table A2: Global Cross-Border Securities Liabilities"
 // ------------------
 // Save final dataset
 // ------------------
-save "$work\Table_A2_Global_Cross_Border_Securities_Liabilities.dta", replace
+save "$work/Table_A2_Global_Cross_Border_Securities_Liabilities.dta", replace
 *use "$work\Table_A2_Global_Cross_Border_Securities_Liabilities.dta", clear
 // Export to Excel
 export excel using "$myexcel", sheet("Table A2") firstrow(varlabels) sheetmodify

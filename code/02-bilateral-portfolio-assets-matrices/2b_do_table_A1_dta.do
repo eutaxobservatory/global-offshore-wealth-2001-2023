@@ -13,7 +13,7 @@
 //----------------------------------------------------------------------------//
 
 // Path to the excel 
-global myexcel "$tables\FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
+global myexcel "$tables/FGMZ_2025_Appendix_Tables_A1_to_A3.xlsx"
 
 // Initialize dataset with years 2001–2023
 // Equities sub-dataset 
@@ -35,7 +35,7 @@ save `main_debt', replace
 // ------------------
 // CPIS Equities
 // ------------------
-use "$temp\data_toteq_update.dta", clear
+use "$temp/data_toteq_update.dta", clear
 replace sumeqasset = sumeqasset / 1000
 collapse (sum) sumeqasset, by(year)
 rename sumeqasset total_cpis
@@ -47,7 +47,7 @@ save `temp1'
 // ------------------
 // CPIS Debt
 // ------------------
-use "$temp\data_totdebt_update.dta", clear
+use "$temp/data_totdebt_update.dta", clear
 replace sumdebtasset = sumdebtasset / 1000
 collapse (sum) sumdebtasset, by(year)
 rename sumdebtasset total_cpis
@@ -61,7 +61,7 @@ save `main'
 // ------------------
 // Source-based collapse for major countries/entities
 // ------------------
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 collapse (sum) eqasset debtasset augmeqasset augmdebtasset, by(year source)
 
 // Create panel from specific sources
@@ -187,7 +187,7 @@ save `main'
 // CPIS Correction
 // ------------------
 
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 preserve
 keep if cpis == 1
 collapse (sum) eqasset debtasset augmeqasset augmdebtasset, by(year)
@@ -238,7 +238,7 @@ save `main'
 // ------------------
 // China Reserves
 // ------------------
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 keep year totaleq_China_public totaldebt_China_public
 collapse (mean) totaleq_China_public totaldebt_China_public, by(year)
 replace totaleq_China_public = totaleq_China_public / 1000
@@ -268,7 +268,7 @@ save `main'
 // ------------------
 // Private Equity
 // ------------------
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 keep if cpis != 1 & !inlist(source, 924, 9994, 449, 453, 456, 466, 429, 433)
 gen help_aequity = !missing(aequity)
 collapse (sum) augmeqasset, by(year help_aequity)
@@ -285,7 +285,7 @@ save `temp7'
 // ------------------
 // Private Debt
 // ------------------
-use "$temp\data_full_matrices.dta", clear
+use "$temp/data_full_matrices.dta", clear
 keep if cpis != 1 & !inlist(source, 924, 9994, 449, 453, 456, 466, 429, 433)
 gen help_aportif = !missing(aportif_debt)
 collapse (sum) augmdebtasset, by(year help_aportif)
@@ -381,7 +381,7 @@ label data "Table A1: Global Cross-Border Securities Assets"
 // ------------------
 // Save final dataset
 // ------------------
-save "$work\Table_A1_Global_Cross_Border_Securities_Assets.dta", replace
+save "$work/Table_A1_Global_Cross_Border_Securities_Assets.dta", replace
 *use "$work\Table_A1_Global_Cross_Border_Securities_Assets.dta", clear
 // Export to Excel
 export excel using "$myexcel", sheet("Table A1") firstrow(varlabels) sheetmodify

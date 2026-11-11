@@ -14,26 +14,9 @@
 // outputs:        - Fig13: $fig/fig-13-sensitivity_ofc_hh_shares.pdf
 //                 - Fig A18: $fig/fig-A18-sensitivity_ofc_hh_shares2.pdf
 //                 - Fig A19: $fig/fig-A19-ofw-owned-by-region-total-ofw-tph.pdf
+//                 - Table 1: $tables/tab-01-sensitivity-global-ofw.xlsx
+//                 - Table 2: $tables/tab-02-sensitivity-country-ownership.xlsx
 
-
-
-
-// global estimate
-use "$work/sensitivity_global.dta", clear
-keep year ofw_baseline ofw_tph ofw_dep2 ofw_dep3 ofw_KY* ofw_UK* worldgdp
-foreach var of varlist ofw_dep* ofw_UK* ofw_KY* ofw_base{
-	replace `var' = `var' / worldgdp 
-}
-
-order year ofw_tph ofw_baseline ofw_dep2 ofw_dep3 ofw_KY* ofw_UK*
-label var ofw_tph "Including Intra-Euro Area Third Party Holdings"
-label var ofw_dep2 "Deposit Ratio OECD"
-label var ofw_dep3 "Deposit Ratio US Top 10"
-label var ofw_KYub "Cayman Upper Bound (portfolio share 0.85)"
-label var ofw_KYlb "Cayman Lower Bound (portfolio share 0.65)"
-label var ofw_UKlb "UK Upper Bound (Onshore share 0.21)" // note: lower onshore share generates upper bound ofw estimate
-label var ofw_UKub "UK Lower Bound (Onshore share 0.41)" // note higher onshore share generates lower bound ofw estimate
-save "$work/sensitivity_global.dta", replace
 
 
 ********************************************************************************
@@ -153,7 +136,7 @@ graph export "$fig/eps/fig-A18-sensitivity_ofc_hh_shares2.eps", replace
 
 // Add potentially recorded intra-euro area offshore wealth
 *extract xrate
-import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
+import excel "$raw/IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
 foreach v of varlist E-AB {
     rename `v' v_`=`v'[7]'
 }
@@ -269,7 +252,8 @@ gen nobs=_n
 gen select = 1 if nobs < 22
 replace select = 1 if iso3 == "BEL"| iso3=="RUS"
 keep if select == 1
-export excel year iso3 value change using "$tables\sensitivity_country_allocation_EA.xlsx", sheetmodify firstrow(variables)
+keep year iso3 value change
+save "$work/sensitivity_country_allocation_EA.dta", replace
 restore
 
 
@@ -529,6 +513,124 @@ graph combine g_east_asia_pacific g_europe_central_asia g_latin_america_caribbea
 
 graph export "$fig/fig-A19-ofw-owned-by-region-total-ofw-tph.pdf", replace 
 graph export "$fig/eps/fig-A19-ofw-owned-by-region-total-ofw-tph.eps", replace 
+
+
+
+
+
+
+
+
+********************************************************************************
+* Table 1: Sensitivity of Global Offshore Wealth Estimates
+********************************************************************************
+// global estimate
+use "$work/sensitivity_global.dta", clear
+keep year ofw_baseline ofw_tph ofw_dep2 ofw_dep3 ofw_KY* ofw_UK* worldgdp
+foreach var of varlist ofw_dep* ofw_UK* ofw_KY* ofw_base{
+	replace `var' = `var' / worldgdp 
+}
+
+order year ofw_tph ofw_baseline ofw_dep2 ofw_dep3 ofw_KY* ofw_UK*
+label var ofw_tph "Including Intra-Euro Area Third Party Holdings"
+label var ofw_dep2 "Deposit Ratio OECD"
+label var ofw_dep3 "Deposit Ratio US Top 10"
+label var ofw_KYub "Cayman Upper Bound (portfolio share 0.85)"
+label var ofw_KYlb "Cayman Lower Bound (portfolio share 0.65)"
+label var ofw_UKlb "UK Upper Bound (Onshore share 0.21)" // note: lower onshore share generates upper bound ofw estimate
+label var ofw_UKub "UK Lower Bound (Onshore share 0.41)" // note higher onshore share generates lower bound ofw estimate
+save "$work/sensitivity_global.dta", replace
+
+
+// table: global offshore wealth (% of GDP) under each sensitivity scenario
+drop worldgdp
+order year ofw_baseline ofw_tph ofw_dep2 ofw_dep3 ofw_KYub ofw_KYlb ofw_UKlb ofw_UKub
+label var year         "Year"
+label var ofw_baseline "Baseline"
+label var ofw_tph      "Intra-EA Holdings"
+label var ofw_dep2     "Dep. Ratio OECD"
+label var ofw_dep3     "Dep. Ratio US Top 10"
+label var ofw_KYub     "Cayman UB"
+label var ofw_KYlb     "Cayman LB"
+label var ofw_UKlb     "UK UB" // lower onshore share = upper bound
+label var ofw_UKub     "UK LB" // higher onshore share = lower bound
+sort year
+
+local xlsx "$tables/tab-01-sensitivity-global-ofw.xlsx"
+export excel using "`xlsx'", sheet("Sensitivity") cell(A2) firstrow(varlabels) replace
+
+local last = _N + 2
+putexcel set "`xlsx'", sheet("Sensitivity") modify
+putexcel B1:I1 = "Global Offshore Wealth (% of GDP)", merge hcenter bold
+putexcel A2:I2, bold hcenter border(bottom)
+putexcel B3:I`last', nformat("0.0%")
+putexcel A`last':I`last', border(bottom)
+putexcel close
+
+
+
+********************************************************************************
+* Table 2: Sensitivity Analysis: Country of Ownership
+********************************************************************************
+
+* Uses "$work/sensitivity_country_allocation_2023.dta" and "$work/sensitivity_country_allocation_EA.dta"
+use "$work/sensitivity_country_allocation_2023.dta", clear
+merge 1:1 iso3 using "$work/sensitivity_country_allocation_EA.dta", ///
+	keepusing(change) keep(1 3) nogenerate
+rename change chg_EA
+
+// change relative to preferred estimate (missing if preferred = 0)
+foreach v in 70russiacyprus 90russiacyprus minus10pp_hhshell no_hhshell no_smoothing {
+	gen chg_`v' = (value_`v' - value_main) / value_main
+}
+
+// short country names for the table
+replace country_name = "USA"    if iso3 == "USA"
+replace country_name = "UK"     if iso3 == "GBR"
+replace country_name = "Taiwan" if iso3 == "TWN"
+replace country_name = "Russia" if iso3 == "RUS"
+replace country_name = "Turkey" if iso3 == "TUR"
+
+gsort -value_main
+keep country_name value_main chg_*
+order country_name value_main chg_70russiacyprus chg_90russiacyprus ///
+	chg_minus10pp_hhshell chg_no_hhshell chg_no_smoothing chg_EA
+label var country_name           "Country"
+label var value_main             "USD bn"
+label var chg_70russiacyprus     "70% Cyprus-Russia reallocation"
+label var chg_90russiacyprus     "90% Cyprus-Russia reallocation"
+label var chg_minus10pp_hhshell  "Shell-company share -10 pp"
+label var chg_no_hhshell         "No shell-company"
+label var chg_no_smoothing       "No 5-year smoothing"
+label var chg_EA                 "Intra-EA reallocation"
+
+local xlsx "$tables/tab-02-sensitivity-country-ownership.xlsx"
+export excel using "`xlsx'", sheet("Sensitivity") cell(A2) firstrow(varlabels) replace
+
+local last = _N + 2
+putexcel set "`xlsx'", sheet("Sensitivity") modify
+putexcel B1 = "Preferred", bold hcenter border(bottom)
+putexcel C1:H1 = "Change relative to preferred estimate", merge hcenter bold border(bottom)
+putexcel A2:H2, bold hcenter txtwrap border(bottom)
+putexcel B3:B`last', nformat("0")
+putexcel C3:H`last', nformat("0%")
+
+// "-" where the change cannot be computed
+local cols "C D E F G H"
+local vars "chg_70russiacyprus chg_90russiacyprus chg_minus10pp_hhshell chg_no_hhshell chg_no_smoothing chg_EA"
+forvalues j = 1/6 {
+	local c : word `j' of `cols'
+	local v : word `j' of `vars'
+	forvalues i = 1/`=_N' {
+		if missing(`v'[`i']) putexcel `c'`=`i' + 2' = "-", right
+	}
+}
+putexcel A`last':H`last', border(bottom)
+putexcel close
+
+
+
+
 
 
 //----------------------------------------------------------------------------//

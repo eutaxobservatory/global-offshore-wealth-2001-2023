@@ -6,14 +6,6 @@
 1. Data
 A short description of the required datasets is available in: ~data_for_replication.xlsx.
 The corresponding data files are placed in the folder: ~raw-data/.
-Some input files are too big for the github repository. Download links to the original datasets can be found in the raw-data folder.
-For an exact replication request the files
- * BIS Locational Banking Statistics (Dec 2024 version)
- * IMF CDIS direct-investment-position (April 2025 version)
- * IMF CPIS (Sep 2024 version)
- from:
- Name: [Sarah Godar]
- Email: sgodar [at] diw.de
 
 2. Running the Code in Stata
 To replicate the results, follow these steps:
@@ -23,3 +15,8 @@ This script runs all the code needed for replication. Note that it may take seve
 
 3. Figures from the paper
 After running all the code, the paper's figures will be in the folder: ~figures/.
+The corresponding scripts with details for each figure are: ~code/07-offshore-wealth-analysis/7e-graph-paper.do and ~code/08-sensitivity/8e-sensitivity-output.do.
+
+4. Tables from the paper
+After running all the code, the paper's tables will be in the folder: ~tables/.
+The corresponding script with details for each table is: ~code/08-sensitivity/8e-sensitivity-output.do.

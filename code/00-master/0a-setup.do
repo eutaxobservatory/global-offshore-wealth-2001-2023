@@ -8,22 +8,24 @@
 
 
 **---------------------------PROGRAMS-----------------------------------------** <------- TO COMPLETE IF NEED
-*ssc install isocodes mmerge wbopendata carryforward wid
-*ssc install estout
+*ssc install isocodes mmerge wbopendata carryforward wid fastreshape
+*ssc install estout 
 
 
 **------------------------------PATHS-----------------------------------------** <------- TO CHANGE 
 * Setting main directories
 else if "`c(username)'" == "sgodar" {							// For Sarah
 	global dropbox		= "C:/Users/sgodar/Dropbox"	
+	// main directory
+	global root "$dropbox/FGZ2023OffshoreWealth/replication/update-to-2023"
+
 }
-else if "`c(username)'" == "c.moura" {							// For Carolina 
-	global dropbox		= "C:/Users/c.moura/Dropbox"	
+else if "`c(username)'" == "carolinamoura" {							// For Carolina 
+	global root		= "/Users/carolinamoura/Library/CloudStorage/Dropbox-CREST/Carolina Moniz De Moura/Carolina/EUTAX_projects/global-offshore-wealth-2001-2023"	
 
 }
 
-// main directory
-global root "$dropbox/FGZ2023OffshoreWealth/replication/update-to-2023"
+
 
 // code files macro
 global do "$root/code"

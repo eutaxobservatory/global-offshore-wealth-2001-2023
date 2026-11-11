@@ -10,7 +10,7 @@
 //----------------------------------------------------------------------------//
 
 //Import external wealth of nations dataset
-import excel using "$raw\ewn\EWN-database-January-2025.xlsx", sheet(Dataset) firstrow clear
+import excel using "$raw/ewn/EWN-database-January-2025.xlsx", sheet(Dataset) firstrow clear
 rename (Year IFS_Code Portfolioequityassets Portfolioequityliabilities Debtassets Debtliabilities Portfoliodebtassets Portfoliodebtliabilities Country GDPUS) (year source aequity lequity adebt ldebt aportif_debt lportif_debt country gdp_us) 
 gen ewn = 1
 drop if year < 2001
@@ -36,7 +36,7 @@ preserve
 restore
 drop if source == 354 | source == 352
 append using `curacao'
-save "$temp\data_ewn_update.dta", replace
+save "$temp/data_ewn_update.dta", replace
 
 
 //----------------------------------------------------------------------------//

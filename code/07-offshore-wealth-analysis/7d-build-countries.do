@@ -16,6 +16,12 @@
 //                 
 //----------------------------------------------------------------------------//
 
+// suffix of input/output files: "" in baseline, "_${assumption}" otherwise
+local sfx ""
+foreach g in smoothing_assumption hh_shell_assumption russiacyprus {
+	if !inlist("${`g'}", "", "baseline") local sfx "`sfx'_${`g'}"
+}
+
 use "$work/ofw_aggregate", clear
 
 // compute each haven's offshore wealth in USD bn
@@ -55,7 +61,7 @@ forvalues i = 2001/2023 {
 * Then we add the amount attracted by each tax haven
 forvalues i = 2001/2023 {
 	use "$temp/attracted_`i'", clear
-	merge 1:m year using "$work/offshore`i'", nogenerate
+	merge 1:m year using "$work/offshore`i'`sfx'", nogenerate
 	replace year = `i'
 	* Compute country level offshore wealth using the shares (from offshore)
 	* and the aggregates (from AJZ), including for our three indicators 
@@ -165,11 +171,11 @@ forvalues i = 2001/2023 {
 	drop if iso3 == "BEH" | iso3 == "CHH" | iso3 == "GBH" | ///
 	iso3 == "IEH" | iso3 == "NLH" | iso3 == "USH" | iso == "TWH"
 	if year == 2001 {
-		save "$work/countries", replace
+		save "$work/countries`sfx'", replace
 		}
 		if year ~= 2001 {
-			append using "$work/countries"
-			save "$work/countries", replace
+			append using "$work/countries`sfx'"
+			save "$work/countries`sfx'", replace
 			}
 			sleep 500
 			erase "$temp/attracted_`i'.dta"
@@ -179,7 +185,7 @@ forvalues i = 2001/2023 {
 // merge GDP and clean
 			use "$work/assembled_gdp_series.dta", clear
 			keep iso3 year gdp_current_dollars
-			merge 1:m year iso3 using "$work/countries", keep(2 3) nogenerate
+			merge 1:m year iso3 using "$work/countries`sfx'", keep(2 3) nogenerate
 			merge m:1 iso3 using "$raw/dta/country_frame", keepusing(country_name incomelevel regionname) keep(1 3) nogenerate
 			* give to Netherlands Antilles the incomelevelgroup and region of curaçao
 			replace country_name = "Netherlands Antilles" if iso3 == "ANT"
@@ -197,9 +203,11 @@ forvalues i = 2001/2023 {
 			drop europe asia latin_am africa
 			order year iso3 country_name indicator label unit value gdp regionname incomelevelname
 			sort year iso3 indicator
-			export excel using "$raw/AJZ2017DataUpdated.xlsx", ///
-			sheet(ctrybyctry01-23) firstrow(variables) sheetreplace
-			save "$work/countries", replace
+			if "`sfx'" == "" {	// baseline only
+				export excel using "$raw/AJZ2017DataUpdated.xlsx", ///
+				sheet(ctrybyctry01-23) firstrow(variables) sheetreplace
+			}
+			save "$work/countries`sfx'", replace
 			
 			
 //----------------------------------------------------------------------------//

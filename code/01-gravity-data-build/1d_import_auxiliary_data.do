@@ -59,7 +59,7 @@
 
 // total equity and total debt
 foreach asset in "eq" "debt"{
-	import excel "$raw\IMF_20241229_Table_15_All_Economies_Reported_Por_`asset'.xlsx", sheet("Table 15") clear
+	import excel "$raw/IMF_20241229_Table_15_All_Economies_Reported_Por_`asset'.xlsx", sheet("Table 15") clear
 	drop A
 
 		foreach v of varlist C - AJ {
@@ -73,11 +73,11 @@ foreach asset in "eq" "debt"{
 	drop if B == ""
 	rename B country
 	rename DEC_ `asset'
-	merge m:1 country using "$raw\dta\iso3_ifs.dta"
+	merge m:1 country using "$raw/dta/iso3_ifs.dta"
 	drop if _merge == 2
 	drop _merge country_v2 zcode
 	rename (ifscode country) (ifscode_orig country_v2)
-	merge m:1 country_v2 using "$raw\dta\iso3_ifs.dta"
+	merge m:1 country_v2 using "$raw/dta/iso3_ifs.dta"
 	drop if _merge == 2
 	drop _merge iso3
 	replace ifscode_orig = ifscode if ifscode_orig == . & ifscode != . 
@@ -87,11 +87,11 @@ foreach asset in "eq" "debt"{
 	drop country_v2 ifscode
 	destring sum`asset'asset, replace
 	drop zcode
-	save "$temp\data_tot`asset'_update.dta", replace
+	save "$temp/data_tot`asset'_update.dta", replace
  }
  
 // gen adjustment factor for equity growth between June and December
-import excel "$raw\IMF_20241229_Table_15_All_Economies_Reported_Por_eq.xlsx", sheet("Table 15") clear
+import excel "$raw/IMF_20241229_Table_15_All_Economies_Reported_Por_eq.xlsx", sheet("Table 15") clear
 drop A
 
 foreach v of varlist C - AJ {
@@ -111,12 +111,12 @@ forvalues j = 2013(1)2023{
 keep B adj*
 reshape long adj_, i(B) j(year) 
 reshape wide adj_, i(year) j(B) string
-save "$temp\adjustfactor_cpis.dta", replace
+save "$temp/adjustfactor_cpis.dta", replace
 
 
 // total liabilities
 foreach liab in "eq" "debt"{
-import excel "$raw\IMF_20241229_International_Investment_Position_`liab'.xlsx", sheet("Annual") clear
+import excel "$raw/IMF_20241229_International_Investment_Position_`liab'.xlsx", sheet("Annual") clear
 
 *million USD
 keep A-Y
@@ -129,11 +129,11 @@ drop in 1
 reshape long v_, i(A) j(year)
 drop if A==""
 rename (A v_) (country `liab')
-merge m:1 country using "$raw\dta\iso3_ifs.dta"
+merge m:1 country using "$raw/dta/iso3_ifs.dta"
 drop if _merge == 2
 drop _merge country_v2 zcode iso3
 rename (ifscode country) (ifscode_orig country_v2)
-merge m:1 country_v2 using "$raw\dta\iso3_ifs.dta"
+merge m:1 country_v2 using "$raw/dta/iso3_ifs.dta"
 drop if _merge == 2
 replace ifscode = 355 if country_v2 == "Curaçao, Kingdom of the Netherlands"
 replace ifscode = 355 if country_v2 == "Sint Maarten, Kingdom of the Netherlands"
@@ -149,17 +149,17 @@ destring `liab'liab_IIP, ignore ("K" ",") replace
 collapse (sum) `liab'liab_IIP, by(host year)
 rename `liab'liab_IIP `liab'liab_IIP_host
 drop if year < 2001 | year > 2023
-save "$temp\IIP_`liab'liab_host.dta", replace
+save "$temp/IIP_`liab'liab_host.dta", replace
 collapse (sum) `liab'liab_IIP, by(year)
 rename `liab'liab_IIP_host `liab'liab_IIP
-save "$temp\IIP_`liab'liab.dta", replace
+save "$temp/IIP_`liab'liab.dta", replace
 }
 
 //----------------------------------------------------------------------------//
 // import U.S. data from TIC
 //----------------------------------------------------------------------------//
 // source: https://home.treasury.gov/data/treasury-international-capital-tic-system/us-liabilities-to-foreigners-from-holdings-of-us-securities
-import delimited using "$raw\ticdata\foreign_holdings_of_US_securities.txt", clear
+import delimited using "$raw/ticdata/foreign_holdings_of_US_securities.txt", clear
 keep v1-v5 v*3 v*4 v*5
 gen nvals = _n
 keep if nvals == 10 | nvals > 11
@@ -207,7 +207,7 @@ foreach var of varlist Debtl Equity Total{
 }
 replace year = 2001 if year == 2000
 gen flag_TIC = "2001 is estimated as the mean of 2000 and 2002" if year == 2001
-save "$temp\data_TIC_update.dta", replace
+save "$temp/data_TIC_update.dta", replace
 
 
 
@@ -215,7 +215,7 @@ save "$temp\data_TIC_update.dta", replace
 // import China's assets
 //----------------------------------------------------------------------------//
 // 1. Public assets: est. 85-95% of foreign exchange reserves
-import excel using "$raw\IMF_20243012_International_Investment_Position_China.xlsx", sheet("Annual") clear
+import excel using "$raw/IMF_20243012_International_Investment_Position_China.xlsx", sheet("Annual") clear
 keep if A == "Other reserve assets" | B == "2004" | A == "Equity and investment fund shares" & A[_n-1] == "Portfolio investment" & A[_n-11] == "Assets" | A == "Debt securities" & A[_n-7] == "Portfolio investment" & A[_n-17] == "Assets"
 keep A - U
 
@@ -242,7 +242,7 @@ rename v_* *_IMF
 
 // foreign exchange reserves pre-2004
 preserve
-import excel using "$raw\IMF_20240318_IFS_China_reserves.xlsx", clear
+import excel using "$raw/IMF_20240318_IFS_China_reserves.xlsx", clear
 
 foreach v of varlist C-Y{
    local vname = strtoname(`v'[2])
@@ -259,12 +259,12 @@ restore
 merge 1:1 year using `reserves_2001'
 replace Reserves_IMF = reserves_2001 if year < 2004
 drop *2001 _merge
-save "$temp\data_IMF_China.dta", replace
+save "$temp/data_IMF_China.dta", replace
 
 //----------------------------------------------------------------------------//
 // import foreign exchange data
 //----------------------------------------------------------------------------//
-import excel using "$raw\International_Liquidity_Reserves.xlsx", clear
+import excel using "$raw/International_Liquidity_Reserves.xlsx", clear
 // International Reserves and Liquidity, Liquidity, Total Reserves excluding Gold, Foreign Exchange, US Dollar, millions
 drop A C D
 rename B country
@@ -279,11 +279,11 @@ destring year v_, replace
 rename v_ reserveIFS
 
 
-merge m:1 country using "$raw\dta\iso3_ifs.dta"
+merge m:1 country using "$raw/dta/iso3_ifs.dta"
 drop if _merge == 2
 drop _merge country_v2 zcode
 rename (ifscode country) (ifscode_orig country_v2)
-merge m:1 country_v2 using "$raw\dta\iso3_ifs.dta"
+merge m:1 country_v2 using "$raw/dta/iso3_ifs.dta"
 drop if _merge == 2
 drop _merge iso3
 replace ifscode_orig = ifscode if ifscode_orig == . & ifscode != . 
@@ -291,7 +291,7 @@ drop if ifscode_orig == . // country groups, e.g. "Advanced Economies"
 rename ifscode_orig source
 drop ifscode country* zcode
 drop if year < 2001
-save "$temp\data_foreignexchange_update.dta", replace
+save "$temp/data_foreignexchange_update.dta", replace
 
 
 //----------------------------------------------------------------------------//
@@ -335,7 +335,7 @@ save "$temp\data_foreignexchange_update.dta", replace
 		save `TIC_liab_monthly_2020f'
 
 		// 2011-2020
-		import delimited "$raw\ifdp1113_data\bertaut_judson_positions_liabs_2021.csv", clear
+		import delimited "$raw/ifdp1113_data/bertaut_judson_positions_liabs_2021.csv", clear
 		split date, p(/)
 		drop date date2
 		rename (date1 date3) (month year)
@@ -350,7 +350,7 @@ save "$temp\data_foreignexchange_update.dta", replace
 		save `TIC_liab_monthly_2011f'
 
 		// 2001-2011
-		import delimited "$raw\ticdata\ticdata.liabilities.ftot.txt", clear
+		import delimited "$raw/ticdata/ticdata.liabilities.ftot.txt", clear
 		split date, p(/)
 		drop date date2
 		rename (date1 date3) (month year)
@@ -375,7 +375,7 @@ save "$temp\data_foreignexchange_update.dta", replace
 		rename eqty equity
 		label var debtl "long-term debt"
 		keep country_code country_name year month equity debtl
-		save "$temp\TIC_liab_monthly_complete.dta", replace
+		save "$temp/TIC_liab_monthly_complete.dta", replace
 
 
 
@@ -384,7 +384,7 @@ save "$temp\data_foreignexchange_update.dta", replace
 //----------------------------------------------------------------------------//
 
 // TIC
-use "$temp\TIC_liab_monthly_complete.dta", clear
+use "$temp/TIC_liab_monthly_complete.dta", clear
 keep if country_code == 36137 // Cayman Islands
 keep if month == 12
 gen source = 377
@@ -395,7 +395,7 @@ save `TIC_lt_monthly_Cayman_complete'
 
 // import TIC short-term debt for Cayman Islands
 // source: https://ticdata.treasury.gov/resource-center/data-chart-center/tic/Documents/lb_36137.txt
-import excel "$raw\TIC_20250113_US_Financial_Firms_Liabilities_Cayman.xlsx", clear
+import excel "$raw/TIC_20250113_US_Financial_Firms_Liabilities_Cayman.xlsx", clear
 keep A B I J
 rename (A B I J) (countrycode date shortterm_official shortterm_other)
 drop in 1/9
@@ -415,10 +415,10 @@ replace shortterm_debt = 11018 if year == 2002
 gen debt = shortterm + debtl
 sort year
 rename (shortterm_debt debtl equity debt) (debts_KY_TIC debtl_KY_TIC eq_KY_TIC debt_KY_TIC)
-save "$temp\Cayman_TIC_Dec.dta", replace
+save "$temp/Cayman_TIC_Dec.dta", replace
 
 // CPIS banking and insurance holdings
-import excel "$raw\IMF_20241230_Assets_Cayman_Banking.xlsx", clear // source: Enhanced CPIS by sector of holder: Depositary Corporations except the Central Bank
+import excel "$raw/IMF_20241230_Assets_Cayman_Banking.xlsx", clear // source: Enhanced CPIS by sector of holder: Depositary Corporations except the Central Bank
 
 foreach v of varlist B - T {
  forvalues k = 2004/2023{
@@ -436,7 +436,7 @@ rename v_ bank
 tempfile KY_banks
 save `KY_banks'
 
-import excel "$raw\IMF_20241230_Assets_Cayman_Insurance.xlsx", clear // source: Enhanced CPIS by sector of holder: Other Financial Corporations: Insurance Corporations and Pension Funds"
+import excel "$raw/IMF_20241230_Assets_Cayman_Insurance.xlsx", clear // source: Enhanced CPIS by sector of holder: Other Financial Corporations: Insurance Corporations and Pension Funds"
 foreach v of varlist B - I {
  forvalues k = 2016/2023{
  replace `v' = subinstr(`v',"Dec. `k'","v_`k'",.) in 3
@@ -457,11 +457,11 @@ gen KY_assets_bank = ins + bank
 replace KY_assets = bank if ins == .
 keep year KY_assets
 gen host = 377
-save "$temp\KY_banks.dta", replace
+save "$temp/KY_banks.dta", replace
 
 
 // estimate equity liabilities of non-financial corporations located in Cayman islands
-import excel "$raw\IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
+import excel "$raw/IMF_20241230_Exchange_Rates_incl_USD_eop.xlsx", clear // 2001-2023
 foreach v of varlist E - AB {
  forvalues k = 2001/2023{
  replace `v' = subinstr(`v',"`k'","v_`k'",.) in 7
@@ -543,18 +543,18 @@ drop _merge
 gen mktcap_usd = mktcap / xrate
 collapse (sum) mktcap_usd , by(year)
 gen eqliab_nfc = 0.75 * mktcap_usd
-save "$raw\dta\KY_liab_nfc.dta", replace
+save "$raw/dta/KY_liab_nfc.dta", replace
 */
 
-use "$raw\dta\KY_liab_nfc.dta", clear
-save "$raw\dta\KY_liab_nfc_baseline.dta", replace
+use "$raw/dta/KY_liab_nfc.dta", clear
+save "$raw/dta/KY_liab_nfc_baseline.dta", replace
 drop eqliab_nfc
 gen eqliab_nfc = 0.65 * mktcap_usd
-save "$raw\dta\KY_liab_nfc_lowerbound.dta", replace
+save "$raw/dta/KY_liab_nfc_lowerbound.dta", replace
 
 drop eqliab_nfc
 gen eqliab_nfc = 0.85 * mktcap_usd
-save "$raw\dta\KY_liab_nfc_upperbound.dta", replace
+save "$raw/dta/KY_liab_nfc_upperbound.dta", replace
 
 
 //----------------------------------------------------------------------------//
@@ -562,7 +562,7 @@ save "$raw\dta\KY_liab_nfc_upperbound.dta", replace
 //----------------------------------------------------------------------------//
 
 // long-term
-use "$temp\TIC_liab_monthly_complete.dta", clear
+use "$temp/TIC_liab_monthly_complete.dta", clear
 keep if country_code == 41408
 keep if month == 12
 tempfile TIC_longterm_monthly_China
@@ -570,7 +570,7 @@ save `TIC_longterm_monthly_China'
 
 // short term
  // short-term 2003-2023 // Source: https://ticdata.treasury.gov/resource-center/data-chart-center/tic/Documents/lb_41408.txt
-	import excel "$raw\TIC_20250113_US_Financial_Firms_Liabilities_China.xlsx", clear
+	import excel "$raw/TIC_20250113_US_Financial_Firms_Liabilities_China.xlsx", clear
 
 	keep A B I J // Negotiable CDs and short-term securities "[7] held by foreign official institutions and foreign banks"; "[8] held by all other foreigners"
 	rename (A B I J) (countrycode date shortterm_official shortterm_other)
@@ -586,7 +586,7 @@ save `TIC_longterm_monthly_China'
 	save `TIC_China_short'
 
 	// short term 2001-2003
-	import excel "$raw\TIC_202403_US_Financial_Firms_Liabilities_China.xlsx", sheet("before2003") clear
+	import excel "$raw/TIC_202403_US_Financial_Firms_Liabilities_China.xlsx", sheet("before2003") clear
 	keep A B I J
 	rename (A B I J) (countrycode date shortterm_official shortterm_other)
 	drop in 1/18
@@ -620,7 +620,7 @@ label var debtl_China_TIC "long-term debt securities - TIC"
 rename shortterm_debt debts_China_TIC
 label var debts_China_TIC "short-term debt securities - TIC"
 gen debt_China_TIC = debtl_China_TIC + debts_China_TIC
-save "$temp\TIC_China_Dec.dta", replace
+save "$temp/TIC_China_Dec.dta", replace
 
 
 //----------------------------------------------------------------------------//
@@ -628,9 +628,9 @@ save "$temp\TIC_China_Dec.dta", replace
 //----------------------------------------------------------------------------//
 
 // Note: Bertaut & Judson report for "Middle Eastern Oil Exporters" on aggregate. In 2010 reporting switches to country-level but comprises only Kuwait and Saudi Arabia -> we switch to TIC June series after 2010 to include all Middle East oil exporters and need to make an adjustment for equity growth between June and December)
-use "$temp\data_TIC_update.dta", clear
+use "$temp/data_TIC_update.dta", clear
 keep if country == " Middle Eastern Oil Exporters" | country == "Kuwait" | country == "Saudi Arabia" | country == "Bahrain" | country == "Iran" | country == "Iraq" | country == "Oman" | country == "Qatar" |country == "United Arab Emirates"
-save "$temp\TIC_update_middleast.dta", replace
+save "$temp/TIC_update_middleast.dta", replace
 collapse (sum) Total (sum) Equity (sum) Debtl, by(year)
 tempfile TIC_update_middleeast_total
 save `TIC_update_middleeast_total'
@@ -640,7 +640,7 @@ save `TIC_update_middleeast_total'
 	//import short-term liabilities of foreign official institutions
 	// source: https://home.treasury.gov/data/treasury-international-capital-tic-system/us-liabilities-to-foreigners-from-holdings-of-us-securities
 	
-	import delimited "$raw\ticdata\bltype_history.csv", clear
+	import delimited "$raw/ticdata/bltype_history.csv", clear
 	keep v1 v6 v7 // ST Treas securities held by FOI [5] + Oth ST Neg secs held by FOI [6]
 	drop in 1/18
 	split v1, p(-)
@@ -658,11 +658,11 @@ save `TIC_update_middleeast_total'
 	replace month = "12" if month == "Dec"
 	replace month = "6" if month == "Jun"
 	destring month, replace
-	save "$temp\TIC_shortterm_FOI.dta", replace
+	save "$temp/TIC_shortterm_FOI.dta", replace
 
 	// import long-term liabilities of foreign official institutions (FOI) -> from Bertaut & Judson 
 		// 2001-2011
-		import delimited "$raw\ifdp1113_data\ticdata.liabilities.foiadj.txt", clear 
+		import delimited "$raw/ifdp1113_data/ticdata.liabilities.foiadj.txt", clear 
 		keep date foi_*_est_pos
 		egen longterm_debt_FOI=rowtotal(foi_agcy* foi_corp* foi_treas*)
 		egen longterm_FOI = rowtotal(foi_agcy* foi_corp* foi_treas* foi_stk)
@@ -679,7 +679,7 @@ save `TIC_update_middleeast_total'
 		save `TIC_longterm_FOI_2001_11'
 
 		// 2011-2022
-		import delimited "$raw\ticdata\slt2d_history.csv", clear
+		import delimited "$raw/ticdata/slt2d_history.csv", clear
 		keep v1 v3 v6 v9 v14 v27 /*Holdings of foreign official institutions*/
 		rename (v3 v6 v9 v14 v27) (foi_total foi_treas foi_agcy foi_corp foi_stk)
 		gen nvals = _n
@@ -723,7 +723,7 @@ save `TIC_update_middleeast_total'
 		}
 
 		drop _merge *update
-		merge 1:1 year month using "$temp\TIC_shortterm_FOI.dta"
+		merge 1:1 year month using "$temp/TIC_shortterm_FOI.dta"
 		drop _merge
 		tempfile TIC_liabs_monthly_FOIs
 		save `TIC_liabs_monthly_FOIs', replace
@@ -732,11 +732,11 @@ save `TIC_update_middleeast_total'
 	gen short_long_ratio = shortterm / longterm_FOI
 	keep if month == 12
 	keep year month longterm_FOI short_long_ratio
-	save "$temp\shortterm_ratio_FOI.dta", replace
+	save "$temp/shortterm_ratio_FOI.dta", replace
 
 
 	// compute adjustment ratio based on TIC reporting for Saudi Arabia & Kuwait to uprate June values to December (because we switch from December to June reporting for Middle Eastern Oil Exporters after 2010)
-	use "$temp\TIC_liab_monthly_complete.dta", clear
+	use "$temp/TIC_liab_monthly_complete.dta", clear
 	keep if country_code == 46612 | country_code == 45608 | country_code == 43109 | country_code == 46604
 	gen help = 1 if country_code == 46612 /*Middle East aggregate*/
 	replace help = 0 if help == .
@@ -760,19 +760,19 @@ save `TIC_update_middleeast_total'
 	replace adj_eq = adj_eq_foiUS if year == 2011
 	keep year adj_eq
 	keep if year < 2024
-	save "$temp\adjust_period.dta", replace
+	save "$temp/adjust_period.dta", replace
 
 
 // extract middle east aggregate from Bertaut & Judson
 // Zucman (2013) uses December values for 2001-2010 and switches to June afterwards because Bertaut & Judson middle east aggregate is discontinued
-use "$temp\TIC_liab_monthly_complete.dta", clear
+use "$temp/TIC_liab_monthly_complete.dta", clear
 keep if country_name ==" Middle Eastern Oil Exporters"
 keep if month == 12
 rename country_name country
 rename eq Equity
 rename debtl Debtl
 gen Total = Equity + Debtl
-save "$temp\Bertaut_Judson_middleeast_Dec.dta", replace
+save "$temp/Bertaut_Judson_middleeast_Dec.dta", replace
 
 
 
@@ -780,7 +780,7 @@ save "$temp\Bertaut_Judson_middleeast_Dec.dta", replace
 // BIS debt securities of international organizations
 //----------------------------------------------------------------------------//
 // Source: https://www.bis.org/statistics/secstats_to180923.htm
-import delimited using "$raw\BIS_20240227_table-c1.csv", clear
+import delimited using "$raw/BIS_20240227_table-c1.csv", clear
 keep v2 v4 v6 v234-v325
 keep if v6 == "Issue market" | v6 == "C:International markets"
 keep if v4 == "Issuer sector - immediate borrower" | v4 == "1:All issuers"
@@ -810,7 +810,7 @@ destring year total_debt_BIS, replace
 gen host = 91 if A == "1C:International organisations"
 
 drop A
-save "$temp\BIS_total_debt_IO.dta", replace
+save "$temp/BIS_total_debt_IO.dta", replace
 
 
 
@@ -820,7 +820,7 @@ save "$temp\BIS_total_debt_IO.dta", replace
 // Source: https://www.globalcapitalallocation.com/data-hub
 
 *Beck et al. amounts in EUR billions
-use "$raw\beck_et_al\Holders_of_IRL_and_LUX_Fund_Shares_by_Counterparty_Country.dta", clear
+use "$raw/beck_et_al/Holders_of_IRL_and_LUX_Fund_Shares_by_Counterparty_Country.dta", clear
 keep if counter == "GBR"
 
 *convert to million USD
@@ -836,7 +836,7 @@ tempfile beck
 save `beck'
 
 * merge to cpis-reported uk-ie equity assets
-use "$temp\cpis_merge.dta", clear
+use "$temp/cpis_merge.dta", clear
 keep if source == 112 & host == 178
 // 2020 in line with Beck et al. "UK reports EUR 336 bn eq assets towards Ireland"
 
@@ -907,7 +907,7 @@ foreach scen in baseline lowerbound upperbound {
 		replace fundshares_gb_missing = missing_eqasset * `share'
 
 		* Fill missing years based on assumed share in total UK equity assets
-		merge 1:1 source year using "$temp\data_toteq_update.dta"
+		merge 1:1 source year using "$temp/data_toteq_update.dta"
 		keep if _merge == 3
 		drop _merge
 
@@ -925,7 +925,7 @@ foreach scen in baseline lowerbound upperbound {
 
 		keep host source year missing_eqasset_uk
 
-		save "$temp\missing_uk_eqassets_`scen'.dta", replace
+		save "$temp/missing_uk_eqassets_`scen'.dta", replace
 
 	restore
 }
@@ -945,7 +945,7 @@ foreach var in ofw_uk_beck missing_eqasset {
 
 keep year missing_eqasset ofw_uk_beck
 
-save "$temp\missing_fundshares.dta", replace
+save "$temp/missing_fundshares.dta", replace
 
 //----------------------------------------------------------------------------//
 // World Inequality Database: Global personal financial wealth
@@ -964,12 +964,12 @@ foreach var in p_finasset p_liab{
 }
 gen p_netfinwealth = p_finasset - p_liab
 keep year p_netfinwealth
-save "$temp\p_netfinwealth.dta", replace
+save "$temp/p_netfinwealth.dta", replace
 
 //----------------------------------------------------------------------------//
 // Alternative deposit share in offshore wealth (sensitivity analysis)
 *OECD
-import delimited "$raw\assumptions\OECD_2026_financial_indicators.csv", clear 
+import delimited "$raw/assumptions/OECD_2026_financial_indicators.csv", clear 
 keep if v10 == "Share of currency and deposits in financial assets of households and NPISH"
 keep if time_period >= 2001 & time_period <= 2023
 bysort referencearea: egen N = count(time_period)
@@ -983,7 +983,7 @@ tempfile dep_share
 save `dep_share', replace
 
 *FRED
-import excel "$raw\assumptions\Board of Governors of the Federal Reserve System 2026 - Financial assets.xlsx", sheet("Quarterly") firstrow clear
+import excel "$raw/assumptions/Board of Governors of the Federal Reserve System 2026 - Financial assets.xlsx", sheet("Quarterly") firstrow clear
 gen dep_share_top10 =  ( WFRBLTOP1DE+ WFRBLDEN09) / (WFRBLT01004 + WFRBLN09031)
 gen dep_share_bottom50 = WFRBLDEB50/ WFRBLB50085
 gen year = year(observation_date)
